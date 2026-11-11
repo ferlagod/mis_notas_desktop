@@ -83,9 +83,19 @@ jobs:
         with:
           path: dist
       - name: Nombres distintos para los DMG de Apple Silicon e Intel
+        # upload-artifact conserva las subcarpetas (dmg/, msi/…), así que se busca a cualquier profundidad.
         run: |
-          for f in dist/installers-macos-latest/*.dmg; do mv "$f" "${f%.dmg}-arm64.dmg"; done
-          for f in dist/installers-macos-15-intel/*.dmg; do mv "$f" "${f%.dmg}-x64.dmg"; done
+          rename() {
+            found=0
+            while IFS= read -r -d '' f; do
+              mv "$f" "${f%.dmg}-$2.dmg"
+              found=1
+            done < <(find "$1" -name '*.dmg' -print0)
+            [ "$found" = 1 ] || { echo "No hay ningún .dmg en $1"; exit 1; }
+          }
+          rename dist/installers-macos-latest arm64
+          rename dist/installers-macos-15-intel x64
+          find dist -type f
       - uses: softprops/action-gh-release@v2
         with:
           files: dist/**/*
