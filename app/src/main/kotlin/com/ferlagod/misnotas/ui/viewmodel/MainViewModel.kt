@@ -56,9 +56,13 @@ import java.util.concurrent.TimeUnit
  * Filtro de navegación para la vista de notas.
  */
 sealed interface NotesFilter {
+    /** Todas las notas fuera de la papelera. */
     data object All : NotesFilter
+    /** Solo las fijadas. */
     data object Pinned : NotesFilter
+    /** La papelera. */
     data object Trash : NotesFilter
+    /** Las notas de una carpeta (sin las de sus subcarpetas). */
     data class Folder(val folderId: String, val folderName: String) : NotesFilter
 }
 
@@ -66,13 +70,17 @@ sealed interface NotesFilter {
 sealed interface UiEvent {
     /** Se movieron notas a la papelera: la interfaz ofrece "Deshacer". */
     data class NotesTrashed(val ids: List<String>) : UiEvent
+    /** Mensaje ya traducido para mostrar tal cual. */
     data class Message(val text: String) : UiEvent
 }
 
 /** Navegación pedida desde fuera de la pantalla actual (menú de la ventana, atajos de teclado). */
 sealed interface PendingNavigation {
+    /** Abrir el editor con una nota nueva. */
     data object NewNote : PendingNavigation
+    /** Abrir una nota existente. */
     data class OpenNote(val noteId: String) : PendingNavigation
+    /** Abrir los ajustes. */
     data object Settings : PendingNavigation
 }
 
@@ -92,7 +100,9 @@ class MainViewModel : ViewModel() {
     private val authPreferences = syncRepository.authPreferences
     private val appSettings = AppSettings.getInstance()
 
+    /** Estado de la sincronización. */
     val syncState: StateFlow<SyncState> = syncRepository.syncState
+    /** Preferencias de aspecto y comportamiento. */
     val settings: StateFlow<AppSettingsState> = appSettings.state
 
     /** Serializa las escrituras de notas (p. ej. autoguardado seguido de "mover a papelera"). */
@@ -113,44 +123,55 @@ class MainViewModel : ViewModel() {
         val isPinned: Boolean
     )
 
+    /** Versión de partida de cada nota abierta en el editor, por id (ver [EditorBase]). */
     private val editorBases = java.util.concurrent.ConcurrentHashMap<String, EditorBase>()
 
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
+    /** Avisos puntuales; cada uno se entrega una sola vez. */
     val events: Flow<UiEvent> = _events.receiveAsFlow()
 
     private val _pendingNavigation = MutableStateFlow<PendingNavigation?>(null)
+    /** Navegación pendiente; la pantalla la ejecuta y llama a [consumeNavigation]. */
     val pendingNavigation: StateFlow<PendingNavigation?> = _pendingNavigation.asStateFlow()
 
     private val _isConfigured = MutableStateFlow(authPreferences.hasCredentials())
+    /** Hay una cuenta de Nextcloud conectada. */
     val isConfigured: StateFlow<Boolean> = _isConfigured.asStateFlow()
 
     private val _isUnlocked = MutableStateFlow(
         if (authPreferences.hasCredentials()) authPreferences.isKeyUnlocked() else true
     )
+    /** La clave de cifrado está disponible. Sin cuenta conectada siempre es `true`. */
     val isUnlocked: StateFlow<Boolean> = _isUnlocked.asStateFlow()
 
     private val _currentFilter = MutableStateFlow<NotesFilter>(NotesFilter.All)
+    /** Qué notas se están viendo. */
     val currentFilter: StateFlow<NotesFilter> = _currentFilter.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
+    /** Texto de búsqueda actual. */
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
     private val _busy = MutableStateFlow(false)
     /** Hay una importación/exportación en curso. */
     val busy: StateFlow<Boolean> = _busy.asStateFlow()
 
+    /** Todas las notas fuera de la papelera. */
     val allActiveNotes = noteDao.getAllNotesFlow().stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
     )
 
+    /** Notas de la papelera. */
     val trashNotes = noteDao.getTrashNotesFlow().stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
     )
 
+    /** Todas las carpetas, por nombre. */
     val allFolders = folderDao.getAllFoldersFlow().stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList()
     )
 
+    /** Carpetas indexadas por id. */
     val foldersMap: StateFlow<Map<String, FolderEntity>> = allFolders
         .map { list -> list.associateBy { it.id } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
@@ -160,6 +181,10 @@ class MainViewModel : ViewModel() {
         (active + trash).associate { it.id to TextSearch.normalize(it.title + "\n" + it.content) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
+    /**
+     * Notas que muestra la lista: filtro actual, búsqueda (todas las palabras, sin acentos) y orden
+     * elegido, con las fijadas primero. La papelera se ordena siempre por fecha.
+     */
     val displayedNotes: StateFlow<List<NoteEntity>> = combine(
         combine(allActiveNotes, trashNotes, ::Pair),
         _currentFilter,
@@ -182,17 +207,22 @@ class MainViewModel : ViewModel() {
         else matching.sortedWith(compareByDescending<NoteEntity> { it.isPinned }.then(sortOrder.comparator()))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    /** Número de notas fuera de la papelera. */
     val totalActiveNotesCount = allActiveNotes.map { it.size }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    /** Número de notas fijadas. */
     val pinnedNotesCount = allActiveNotes.map { notes -> notes.count { it.isPinned } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    /** Número de notas en la papelera. */
     val trashNotesCount = trashNotes.map { it.size }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    /** Texto traducido. */
     private fun text(id: String, vararg args: Any): String = Strings.get(id, *args)
 
+    /** Texto plural traducido, con [count] como argumento. */
     private fun quantity(id: String, count: Int): String = Strings.quantity(id, count, count)
 
     /** Guardados de notas en curso (se esperan antes de cerrar la app). */
@@ -213,12 +243,18 @@ class MainViewModel : ViewModel() {
     // Ajustes
     // ==========================================
 
+    /** Cambia entre cuadrícula y lista. */
     fun toggleLayoutMode() = appSettings.setGridLayout(!settings.value.gridLayout)
+    /** Cambia el orden de las notas. */
     fun setSortOrder(order: SortOrder) = appSettings.setSortOrder(order)
+    /** Cambia el tema. */
     fun setThemeMode(mode: ThemeMode) = appSettings.setThemeMode(mode)
+    /** Activa o desactiva el negro puro en modo oscuro. */
     fun setAmoled(enabled: Boolean) = appSettings.setAmoled(enabled)
+    /** Activa o desactiva el bloqueo al abrir. */
     fun setAppLock(enabled: Boolean) = appSettings.setAppLock(enabled)
 
+    /** Activa o desactiva el vaciado automático de la papelera; al activarlo se aplica enseguida. */
     fun setAutoPurgeTrash(enabled: Boolean) {
         appSettings.setAutoPurgeTrash(enabled)
         if (enabled) viewModelScope.launch { purgeOldTrash() }
@@ -240,6 +276,10 @@ class MainViewModel : ViewModel() {
     // Cuenta y cifrado
     // ==========================================
 
+    /**
+     * Conecta una cuenta de Nextcloud y desbloquea (o crea) su bóveda cifrada.
+     * Exige todos los campos y una URL `https://`. Llama a [onError] con un mensaje traducido si falla.
+     */
     fun setupAndUnlock(
         serverUrl: String,
         username: String,
@@ -271,6 +311,7 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    /** Desbloquea la bóveda con la contraseña de cifrado y arranca la sincronización. */
     fun unlockWithPassword(
         masterPassword: String,
         onSuccess: () -> Unit,
@@ -292,12 +333,14 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    /** Olvida la clave de cifrado: la próxima vez se pedirá la contraseña. Sin cuenta no hace nada. */
     fun lock() {
         if (!_isConfigured.value) return
         authPreferences.clearDerivedKey()
         _isUnlocked.value = false
     }
 
+    /** Desconecta la cuenta pero conserva los parámetros de la bóveda y las notas locales. */
     fun disconnectNextcloud() {
         SyncWorker.cancel()
         authPreferences.clearCredentials()
@@ -307,6 +350,7 @@ class MainViewModel : ViewModel() {
         _isUnlocked.value = true
     }
 
+    /** Desconecta la cuenta y olvida también los parámetros de la bóveda. Las notas locales se conservan. */
     fun logout() {
         SyncWorker.cancel()
         authPreferences.clearAll()
@@ -321,14 +365,17 @@ class MainViewModel : ViewModel() {
     /** Nota en vivo, para que el editor muestre cambios de otros dispositivos si no se ha tocado. */
     fun observeNote(id: String): Flow<NoteEntity?> = noteDao.getNoteByIdFlow(id)
 
+    /** Credenciales de la cuenta conectada, o `null`. */
     fun getCredentials(): NextcloudCredentials? = authPreferences.getCredentials()
 
+    /** Fecha de la última sincronización correcta, o `null`. */
     fun getLastSync(): Long? = authPreferences.getLastSync()
 
     // ==========================================
     // Sincronización
     // ==========================================
 
+    /** Sincroniza en segundo plano si hay cuenta y la bóveda está desbloqueada. */
     fun triggerSync() {
         if (!_isConfigured.value || !_isUnlocked.value) return
         viewModelScope.launch { syncRepository.synchronize() }
@@ -338,19 +385,23 @@ class MainViewModel : ViewModel() {
     // Navegación y búsqueda
     // ==========================================
 
+    /** Cambia el filtro de notas y borra la búsqueda. */
     fun setFilter(filter: NotesFilter) {
         _currentFilter.value = filter
         _searchQuery.value = ""
     }
 
+    /** Cambia el texto de búsqueda. */
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
     }
 
+    /** Pide una navegación desde fuera de la pantalla actual. */
     fun requestNavigation(navigation: PendingNavigation) {
         _pendingNavigation.value = navigation
     }
 
+    /** Marca la navegación pendiente como hecha. */
     fun consumeNavigation() {
         _pendingNavigation.value = null
     }
@@ -359,6 +410,7 @@ class MainViewModel : ViewModel() {
     // Carpetas
     // ==========================================
 
+    /** Crea una carpeta (no hace nada si el nombre está vacío). */
     fun createFolder(name: String, color: NoteColor, parentId: String? = null) {
         if (name.isBlank()) return
         viewModelScope.launch {
@@ -376,6 +428,9 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Cambia nombre, color y carpeta padre. Si el padre crearía un ciclo, la carpeta pasa al nivel superior.
+     */
     fun updateFolder(id: String, name: String, color: NoteColor, parentId: String? = null) {
         if (name.isBlank()) return
         viewModelScope.launch {
@@ -446,6 +501,7 @@ class MainViewModel : ViewModel() {
         editorBases[id] = EditorBase(title, content, folderId, color.key, isPinned)
     }
 
+    /** [saveNoteInTransaction] dentro de una transacción. Se llama con [noteWriteMutex] tomado. */
     private suspend fun saveNoteLocked(
         id: String,
         title: String,
@@ -458,6 +514,10 @@ class MainViewModel : ViewModel() {
         saveNoteInTransaction(id, title, content, folderId, color, isPinned, closing)
     }
 
+    /**
+     * Lógica de [saveNote]: crea, actualiza o descarta la nota comparando con lo guardado y con
+     * la versión de partida del editor, para no pisar cambios recibidos mientras estaba abierta.
+     */
     private suspend fun saveNoteInTransaction(
         id: String,
         title: String,
@@ -601,6 +661,7 @@ class MainViewModel : ViewModel() {
         return copy.id
     }
 
+    /** Fija o desfija una nota. */
     fun togglePin(note: NoteEntity) {
         viewModelScope.launch {
             noteWriteMutex.withLock {
@@ -625,8 +686,10 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    /** Saca una nota de la papelera. */
     fun restoreNote(noteId: String) = restoreNotes(listOf(noteId))
 
+    /** Saca varias notas de la papelera (también es el "Deshacer" de [moveNotesToTrash]). */
     fun restoreNotes(ids: Collection<String>) {
         if (ids.isEmpty()) return
         viewModelScope.launch {
@@ -637,6 +700,7 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    /** Vacía la papelera. Con cuenta, las notas se borran del servidor en la siguiente sincronización. */
     fun emptyTrash() {
         viewModelScope.launch {
             noteWriteMutex.withLock {
@@ -646,8 +710,10 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    /** Borra una nota de forma definitiva. */
     fun deleteNotePermanently(noteId: String) = deleteNotesPermanently(listOf(noteId))
 
+    /** Borra varias notas de forma definitiva. */
     fun deleteNotesPermanently(ids: Collection<String>) {
         if (ids.isEmpty()) return
         viewModelScope.launch {
@@ -658,12 +724,16 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    /** Fija o desfija varias notas. */
     fun setNotesPinned(ids: Collection<String>, pinned: Boolean) = bulkUpdate { noteDao.setPinnedMany(ids.toList(), pinned) }
 
+    /** Cambia el color de varias notas. */
     fun setNotesColor(ids: Collection<String>, color: NoteColor) = bulkUpdate { noteDao.setColor(ids.toList(), color.key) }
 
+    /** Mueve varias notas a una carpeta (`null` = sin carpeta). */
     fun moveNotes(ids: Collection<String>, folderId: String?) = bulkUpdate { noteDao.moveToFolder(ids.toList(), folderId) }
 
+    /** Ejecuta un cambio en bloque con el cerrojo de escritura y luego sincroniza. */
     private fun bulkUpdate(block: suspend () -> Unit) {
         viewModelScope.launch {
             noteWriteMutex.withLock { block() }
@@ -690,11 +760,13 @@ class MainViewModel : ViewModel() {
     // Copia de seguridad
     // ==========================================
 
+    /** Exporta la copia de seguridad ZIP a [file] y avisa del resultado. */
     fun exportBackup(file: File) = runBusy {
         val count = backupManager.exportZip(file, text(R.string.untitled))
         _events.trySend(UiEvent.Message(quantity(R.plurals.export_done, count)))
     }
 
+    /** Importa ZIP o ficheros Markdown y avisa de cuántas notas se han importado. */
     fun importBackup(uris: List<File>) {
         if (uris.isEmpty()) return
         runBusy {
@@ -705,6 +777,10 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Ejecuta una tarea larga marcando [busy]; si ya hay una en curso no hace nada.
+     * Los errores se muestran como mensaje.
+     */
     private fun runBusy(block: suspend () -> Unit) {
         if (_busy.value) return
         _busy.value = true

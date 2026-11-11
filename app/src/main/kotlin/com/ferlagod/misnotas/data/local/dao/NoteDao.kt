@@ -11,18 +11,27 @@ import com.ferlagod.misnotas.data.local.entity.NoteEntity
 import com.ferlagod.misnotas.data.local.model.SyncStatus
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * Acceso a la tabla `notes`.
+ * Toda modificación hecha por el usuario deja la nota en `PENDING_UPLOAD` y actualiza `updatedAt`,
+ * para que la siguiente sincronización la suba al servidor.
+ */
 @Dao
 interface NoteDao {
 
+    /** Notas visibles (fuera de la papelera), primero las fijadas y luego por fecha de edición. */
     @Query("SELECT * FROM notes WHERE isDeleted = 0 ORDER BY isPinned DESC, updatedAt DESC")
     fun getAllNotesFlow(): Flow<List<NoteEntity>>
 
+    /** Notas de la papelera, sin las que ya están pendientes de borrado definitivo. */
     @Query("SELECT * FROM notes WHERE isDeleted = 1 AND syncStatus != 'PENDING_DELETE' ORDER BY updatedAt DESC")
     fun getTrashNotesFlow(): Flow<List<NoteEntity>>
 
+    /** Observa una nota concreta; emite `null` si no existe o se elimina. */
     @Query("SELECT * FROM notes WHERE id = :id LIMIT 1")
     fun getNoteByIdFlow(id: String): Flow<NoteEntity?>
 
+    /** Lee una nota por su id, esté donde esté (también en la papelera). */
     @Query("SELECT * FROM notes WHERE id = :id LIMIT 1")
     suspend fun getNoteById(id: String): NoteEntity?
 
@@ -30,30 +39,39 @@ interface NoteDao {
     @Query("SELECT * FROM notes")
     suspend fun getAll(): List<NoteEntity>
 
+    /** Notas con el estado de sincronización indicado. */
     @Query("SELECT * FROM notes WHERE syncStatus = :syncStatus")
     suspend fun getNotesBySyncStatus(syncStatus: SyncStatus): List<NoteEntity>
 
+    /** Contenido de todas las notas no purgadas; sirve para saber qué adjuntos siguen en uso. */
     @Query("SELECT content FROM notes WHERE syncStatus != 'PENDING_DELETE'")
     suspend fun getAllLiveContents(): List<String>
 
+    /** Notas con el formato antiguo (JSON con lista `images`) que aún no se han migrado a Markdown. */
     @Query("SELECT * FROM notes WHERE content LIKE '{%' AND content LIKE '%\"images\"%'")
     suspend fun getNotesWithLegacyImages(): List<NoteEntity>
 
+    /** Inserta la nota o la sustituye si ya existe. */
     @Upsert
     suspend fun upsertNote(note: NoteEntity)
 
+    /** Inserta o sustituye varias notas en una sola transacción. */
     @Upsert
     suspend fun upsertNotes(notes: List<NoteEntity>)
 
+    /** Fija o desfija una nota. */
     @Query("UPDATE notes SET isPinned = :isPinned, updatedAt = :updatedAt, syncStatus = 'PENDING_UPLOAD' WHERE id = :id")
     suspend fun setPinned(id: String, isPinned: Boolean, updatedAt: Long = System.currentTimeMillis())
 
+    /** Fija o desfija varias notas; solo toca las que cambian de estado. */
     @Query("UPDATE notes SET isPinned = :isPinned, updatedAt = :updatedAt, syncStatus = 'PENDING_UPLOAD' WHERE id IN (:ids) AND isPinned != :isPinned AND syncStatus != 'PENDING_DELETE'")
     suspend fun setPinnedMany(ids: List<String>, isPinned: Boolean, updatedAt: Long = System.currentTimeMillis())
 
+    /** Cambia el color de varias notas; solo toca las que tienen otro color. */
     @Query("UPDATE notes SET color = :color, updatedAt = :updatedAt, syncStatus = 'PENDING_UPLOAD' WHERE id IN (:ids) AND color != :color AND syncStatus != 'PENDING_DELETE'")
     suspend fun setColor(ids: List<String>, color: String, updatedAt: Long = System.currentTimeMillis())
 
+    /** Mueve varias notas a [folderId] (`null` = sin carpeta); solo toca las que cambian de carpeta. */
     @Query("UPDATE notes SET folderId = :folderId, updatedAt = :updatedAt, syncStatus = 'PENDING_UPLOAD' WHERE id IN (:ids) AND (folderId IS NOT :folderId) AND syncStatus != 'PENDING_DELETE'")
     suspend fun moveToFolder(ids: List<String>, folderId: String?, updatedAt: Long = System.currentTimeMillis())
 
@@ -65,6 +83,7 @@ interface NoteDao {
     @Query("UPDATE notes SET isDeleted = 1, syncStatus = 'PENDING_UPLOAD', updatedAt = :updatedAt WHERE id = :id")
     suspend fun moveToTrash(id: String, updatedAt: Long = System.currentTimeMillis())
 
+    /** Saca la nota de la papelera. */
     @Query("UPDATE notes SET isDeleted = 0, syncStatus = 'PENDING_UPLOAD', updatedAt = :updatedAt WHERE id = :id")
     suspend fun restoreFromTrash(id: String, updatedAt: Long = System.currentTimeMillis())
 
@@ -72,9 +91,11 @@ interface NoteDao {
     @Query("UPDATE notes SET isDeleted = 1, syncStatus = 'PENDING_DELETE', updatedAt = :updatedAt WHERE id = :id")
     suspend fun markForPurge(id: String, updatedAt: Long = System.currentTimeMillis())
 
+    /** Vaciar papelera: marca todas sus notas para borrado definitivo. */
     @Query("UPDATE notes SET syncStatus = 'PENDING_DELETE' WHERE isDeleted = 1")
     suspend fun markTrashForPurge()
 
+    /** Elimina las filas de la papelera sin pasar por la sincronización (solo sin cuenta conectada). */
     @Query("DELETE FROM notes WHERE isDeleted = 1")
     suspend fun deleteTrashPermanently()
 
@@ -89,6 +110,7 @@ interface NoteDao {
     @Query("UPDATE notes SET syncStatus = 'SYNCED', remoteEtag = :etag WHERE id = :id AND updatedAt = :updatedAt AND syncStatus = 'PENDING_UPLOAD'")
     suspend fun markSynced(id: String, updatedAt: Long, etag: String?): Int
 
+    /** Guarda el ETag de la versión del servidor sin cambiar el estado de sincronización. */
     @Query("UPDATE notes SET remoteEtag = :etag WHERE id = :id")
     suspend fun setRemoteEtag(id: String, etag: String?)
 
@@ -109,9 +131,11 @@ interface NoteDao {
     )
     suspend fun trashForReupload(id: String, now: Long = System.currentTimeMillis())
 
+    /** Cambia solo el estado de sincronización. */
     @Query("UPDATE notes SET syncStatus = :status WHERE id = :id")
     suspend fun updateSyncStatus(id: String, status: SyncStatus)
 
+    /** Elimina la fila; se usa cuando el borrado ya está confirmado en el servidor. */
     @Query("DELETE FROM notes WHERE id = :id")
     suspend fun deletePermanently(id: String)
 

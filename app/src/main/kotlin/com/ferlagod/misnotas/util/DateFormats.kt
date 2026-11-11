@@ -16,6 +16,7 @@ import java.time.temporal.ChronoUnit
 /** Fechas en el idioma de la app (sustituye a `android.text.format.DateFormat`/`DateUtils`). */
 object DateFormats {
 
+    /** Instante en la zona horaria del sistema. */
     private fun zoned(timestamp: Long) = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault())
 
     /** Fecha y hora cortas, p. ej. "11 nov 2026, 16:38". */

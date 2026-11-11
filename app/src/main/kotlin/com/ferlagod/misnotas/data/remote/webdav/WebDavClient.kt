@@ -43,6 +43,7 @@ class WebDavClient(
         private const val USER_AGENT = "MisNotas-Desktop"
         private val XML_MEDIA_TYPE = "application/xml; charset=utf-8".toMediaType()
 
+        /** Propiedades que se piden en cada PROPFIND. */
         private val PROPFIND_XML_BODY = """
             <?xml version="1.0" encoding="utf-8" ?>
             <d:propfind xmlns:d="DAV:">
@@ -55,6 +56,9 @@ class WebDavClient(
             </d:propfind>
         """.trimIndent()
 
+        /**
+         * Cliente HTTP compartido. Confía en los certificados del sistema además de los de Java (ver `SystemTrust`).
+         */
         val sharedHttpClient: OkHttpClient by lazy {
             OkHttpClient.Builder()
                 .connectTimeout(20, TimeUnit.SECONDS)
@@ -65,17 +69,20 @@ class WebDavClient(
                 .build()
         }
 
+        /** Quita espacios, el prefijo `W/` y las comillas de un ETag; `null` si queda vacío. */
         fun normalizeEtag(raw: String?): String? {
             if (raw.isNullOrBlank()) return null
             return raw.trim().removePrefix("W/").trim('"').takeIf { it.isNotBlank() }
         }
     }
 
+    /** Petición con la autenticación y el User-Agent ya puestos. */
     private fun baseRequest(url: String) = Request.Builder()
         .url(url)
         .header("Authorization", authHeader)
         .header("User-Agent", USER_AGENT)
 
+    /** Lanza [WebDavAuthException] si el servidor rechaza las credenciales. */
     private fun Response.throwIfAuthError() {
         if (code == 401 || code == 403) throw WebDavAuthException(code)
     }
@@ -138,6 +145,7 @@ class WebDavClient(
         }
     }
 
+    /** Sube texto UTF-8 como JSON. Mismos parámetros y errores que [upload]. */
     suspend fun uploadText(
         fileName: String,
         content: String,
@@ -158,9 +166,11 @@ class WebDavClient(
         }
     }
 
+    /** Descarga un fichero; lanza [WebDavException] con código 404 si no existe. */
     suspend fun download(fileName: String): ByteArray =
         downloadOrNull(fileName) ?: throw WebDavException(404, "No existe $fileName en el servidor")
 
+    /** Descarga un fichero y lo decodifica como UTF-8. */
     suspend fun downloadText(fileName: String): String = String(download(fileName), Charsets.UTF_8)
 
     /** Borrado idempotente (404 se considera éxito). */
@@ -204,8 +214,13 @@ class WebDavClient(
         if (xmlBody.isBlank()) emptyList() else parsePropfindResponse(xmlBody)
     }
 
+    /** URL completa de un fichero dentro de la carpeta de la app. */
     private fun fileUrl(fileName: String): String = rootUrl + fileName.removePrefix("/")
 
+    /**
+     * Extrae los ficheros de una respuesta PROPFIND (multistatus). Ignora los directorios y
+     * desactiva DTD y entidades externas para evitar ataques XXE.
+     */
     internal fun parsePropfindResponse(xml: String): List<RemoteFileMeta> {
         val factory = DocumentBuilderFactory.newInstance().apply {
             isNamespaceAware = true
@@ -241,6 +256,7 @@ class WebDavClient(
         return result
     }
 
+    /** Convierte una fecha HTTP (RFC 1123) a milisegundos; 0 si falta o no es válida. */
     private fun parseHttpDate(value: String?): Long {
         if (value.isNullOrBlank()) return 0L
         return try {

@@ -24,9 +24,15 @@ object SyncWorker {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var job: Job? = null
 
+    /** Intervalo entre sincronizaciones. */
     private val PERIOD = 30.minutes
+    /** Primera espera tras un error transitorio; se duplica en cada reintento hasta [PERIOD]. */
     private val FIRST_RETRY = 2.minutes
 
+    /**
+     * Arranca la sincronización periódica (la primera, al cabo de [PERIOD]). No hace nada si ya está en marcha.
+     * Los errores permanentes (credenciales o bóveda) no se reintentan antes de tiempo.
+     */
     @Synchronized
     fun schedule() {
         if (job?.isActive == true) return
@@ -47,6 +53,7 @@ object SyncWorker {
         }
     }
 
+    /** Detiene la sincronización periódica (p. ej. al desconectar la cuenta). */
     @Synchronized
     fun cancel() {
         job?.cancel()

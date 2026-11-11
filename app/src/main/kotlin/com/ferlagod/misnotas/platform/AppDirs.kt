@@ -10,6 +10,7 @@ import java.io.File
 enum class Os { MAC, WINDOWS, LINUX;
 
     companion object {
+        /** Sistema actual, deducido de la propiedad `os.name`. */
         val current: Os by lazy {
             val name = System.getProperty("os.name").orEmpty().lowercase()
             when {
@@ -32,8 +33,10 @@ enum class Os { MAC, WINDOWS, LINUX;
  */
 object AppDirs {
 
+    /** Carpeta personal del usuario. */
     private val home: File get() = File(System.getProperty("user.home"))
 
+    /** Carpeta de datos de la app (base de datos, preferencias, adjuntos). Se crea si no existe. */
     val dataDir: File by lazy {
         val override = System.getProperty("misnotas.dataDir") ?: System.getenv("MISNOTAS_DATA_DIR")
         val dir = when {
@@ -48,6 +51,7 @@ object AppDirs {
     /** Equivalente al `filesDir` de Android. */
     val filesDir: File by lazy { File(dataDir, "files").apply { mkdirs() } }
 
+    /** Fichero de la base de datos SQLite. */
     val databaseFile: File get() = File(dataDir, "misnotas.db")
 
     /** Carpeta de descargas del usuario (para la copia de seguridad previa a sincronizar). */

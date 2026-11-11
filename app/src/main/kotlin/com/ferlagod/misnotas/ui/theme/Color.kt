@@ -74,6 +74,7 @@ val AccentPurpleDark = Color(0xFFBF5AF2)
 val NoteIndigo = Color(0xFF5856D6)
 val NoteIndigoDark = Color(0xFF5E5CE6)
 
+/** Colores que se pueden asignar a notas y carpetas. [key] es el valor que se guarda y se sincroniza. */
 enum class NoteColor(val key: String) {
     DEFAULT("DEFAULT"),
     YELLOW("YELLOW"),
@@ -86,6 +87,7 @@ enum class NoteColor(val key: String) {
     INDIGO("INDIGO");
 
     companion object {
+        /** Color de una clave guardada (sin distinguir mayúsculas); [DEFAULT] si falta o no se reconoce. */
         fun fromKey(key: String?): NoteColor {
             if (key == null) return DEFAULT
             return entries.firstOrNull {

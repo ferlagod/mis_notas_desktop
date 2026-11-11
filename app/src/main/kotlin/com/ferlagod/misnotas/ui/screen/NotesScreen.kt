@@ -148,6 +148,10 @@ class NotesActions(
     val onMove: (Collection<String>, String?) -> Unit
 )
 
+/**
+ * Lista de notas del filtro actual (todas, fijadas, una carpeta o la papelera), en cuadrícula o
+ * en columna, con búsqueda, orden y selección múltiple (clic derecho) para acciones en bloque.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NotesScreen(
@@ -198,6 +202,7 @@ fun NotesScreen(
     val otherNotes = if (isTrashView) notes else notes.filter { !it.isPinned }
     val showSections = pinnedNotes.isNotEmpty() && otherNotes.isNotEmpty()
 
+    /** Añade o quita una nota de la selección. */
     fun toggleSelection(id: String) {
         selectedIds = if (id in selectedIds) selectedIds - id else selectedIds + id
     }
@@ -463,6 +468,7 @@ fun NotesScreen(
     }
 }
 
+/** Tarjeta de una nota dentro de la cuadrícula: abre la nota o, si hay selección, la marca. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun LazyStaggeredGridItemScope.NoteCardItem(
@@ -502,6 +508,10 @@ private fun LazyStaggeredGridItemScope.NoteCardItem(
     )
 }
 
+/**
+ * Barra superior con la selección activa: número de notas y acciones en bloque (fijar, color,
+ * mover y papelera; en la papelera, restaurar y eliminar definitivamente).
+ */
 @Composable
 private fun SelectionBar(
     count: Int,
@@ -558,6 +568,7 @@ private fun SelectionBar(
     }
 }
 
+/** Menú desplegable para elegir el orden de las notas. */
 @Composable
 private fun SortMenu(
     expanded: Boolean,
@@ -582,6 +593,7 @@ private fun SortMenu(
     }
 }
 
+/** Clave del texto que describe este orden. */
 fun SortOrder.labelRes(): String = when (this) {
     SortOrder.MODIFIED_DESC -> R.string.sort_modified_desc
     SortOrder.MODIFIED_ASC -> R.string.sort_modified_asc
@@ -589,6 +601,7 @@ fun SortOrder.labelRes(): String = when (this) {
     SortOrder.TITLE_DESC -> R.string.sort_title_desc
 }
 
+/** Campo de búsqueda dentro de la lista. */
 @Composable
 private fun SearchField(query: String, hint: String, onQueryChange: (String) -> Unit) {
     Surface(
@@ -644,6 +657,7 @@ private fun SearchField(query: String, hint: String, onQueryChange: (String) -> 
     }
 }
 
+/** Aviso de la papelera: cuántas notas hay, si se vacía sola y un botón para vaciarla. */
 @Composable
 private fun TrashBanner(count: Int, autoPurge: Boolean, onEmpty: () -> Unit) {
     Surface(
@@ -686,6 +700,7 @@ private fun TrashBanner(count: Int, autoPurge: Boolean, onEmpty: () -> Unit) {
     }
 }
 
+/** Diálogo de confirmación para acciones que no se pueden deshacer; el botón va en rojo. */
 @Composable
 fun ConfirmDestructiveDialog(
     title: String,
@@ -711,6 +726,7 @@ fun ConfirmDestructiveDialog(
     )
 }
 
+/** Título de sección dentro de la lista ("Fijadas", "Otras"). */
 @Composable
 private fun SectionHeader(title: String) {
     Text(
@@ -737,6 +753,13 @@ private fun highlighted(text: String, terms: List<String>): AnnotatedString {
     }
 }
 
+/**
+ * Tarjeta de una nota: título, inicio del texto (con lo buscado resaltado), miniatura, carpeta y
+ * fecha. Su menú permite fijarla, seleccionarla o moverla a la papelera; en la papelera,
+ * restaurarla o eliminarla definitivamente.
+ *
+ * @param isActive la nota está abierta en el panel lateral.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NoteCard(
@@ -1000,5 +1023,6 @@ fun NoteCard(
 /** "Hace 5 min", "Ayer"… para fechas recientes; fecha corta para el resto. */
 private fun formatNoteDate(timestamp: Long): String = DateFormats.relative(timestamp)
 
+/** Primera imagen Base64 incrustada (formato antiguo), para la miniatura. */
 private fun extractFirstDataUri(content: String): String? =
     Regex("data:image/[^;]+;base64,[A-Za-z0-9+/=]+").find(content)?.value

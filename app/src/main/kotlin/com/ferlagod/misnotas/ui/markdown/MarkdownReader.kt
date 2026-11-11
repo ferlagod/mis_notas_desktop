@@ -56,16 +56,27 @@ import com.ferlagod.misnotas.ui.theme.AccentGreen
  * Bloques Markdown reconocidos por el lector. Subconjunto de CommonMark/GFM pensado para notas.
  */
 private sealed interface MdBlock {
+    /** Título de nivel [level] (1-6). */
     data class Heading(val level: Int, val text: String) : MdBlock
+    /** Línea de texto normal. */
     data class Paragraph(val text: String) : MdBlock
+    /** Cita. */
     data class Quote(val text: String) : MdBlock
+    /** Tarea con casilla; [lineIndex] permite marcarla desde el lector. */
     data class Task(val lineIndex: Int, val checked: Boolean, val text: String, val indent: Int) : MdBlock
+    /** Elemento de lista con viñeta. */
     data class Bullet(val text: String, val indent: Int) : MdBlock
+    /** Elemento de lista numerada. */
     data class Numbered(val number: String, val text: String, val indent: Int) : MdBlock
+    /** Bloque de código entre ```` ``` ````. */
     data class Code(val text: String) : MdBlock
+    /** Imagen sola en su línea. */
     data class Image(val lineIndex: Int, val alt: String, val source: String) : MdBlock
+    /** Tabla GFM: cabecera y filas. */
     data class Table(val header: List<String>, val rows: List<List<String>>) : MdBlock
+    /** Separador horizontal. */
     data object Rule : MdBlock
+    /** Línea en blanco. */
     data object Blank : MdBlock
 }
 
@@ -77,9 +88,11 @@ private val IMAGE_REGEX = Regex("""^\s*!\[(.*?)]\((.*?)\)\s*$""")
 private val RULE_REGEX = Regex("""^\s*([-*_])(\s*\1){2,}\s*$""")
 private val TABLE_SEPARATOR = Regex("""^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$""")
 
+/** Celdas de una fila de tabla, sin las barras de los extremos. */
 private fun tableCells(line: String): List<String> =
     line.trim().removePrefix("|").removeSuffix("|").split('|').map { it.trim() }
 
+/** Divide el Markdown en bloques. */
 private fun parseBlocks(markdown: String): List<MdBlock> {
     val lines = markdown.lines()
     val blocks = mutableListOf<MdBlock>()
@@ -347,6 +360,7 @@ fun NoteImage(
     }
 }
 
+/** Tabla con desplazamiento horizontal si no cabe. */
 @Composable
 private fun MarkdownTable(table: MdBlock.Table, linkColor: Color) {
     val border = MaterialTheme.colorScheme.outlineVariant
@@ -367,6 +381,7 @@ private fun MarkdownTable(table: MdBlock.Table, linkColor: Color) {
     }
 }
 
+/** Celda de tabla con formato en línea; la cabecera va en negrita. */
 @Composable
 private fun TableCell(text: String, linkColor: Color, header: Boolean) {
     Text(
@@ -381,6 +396,7 @@ private fun TableCell(text: String, linkColor: Color, header: Boolean) {
     )
 }
 
+/** Fila de lista: marcador ([marker]) sangrado según [indent] y el contenido a su lado. */
 @Composable
 private fun ListRow(marker: String, indent: Int, markerColor: Color, content: @Composable () -> Unit) {
     Row(

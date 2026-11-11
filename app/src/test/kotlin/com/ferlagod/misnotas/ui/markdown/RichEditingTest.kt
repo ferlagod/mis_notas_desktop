@@ -9,6 +9,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/** Editor visual: análisis en línea, ocultación de marcadores, cursor y borrado. */
 class RichEditingTest {
 
     private fun doc(text: String) = MarkdownPresenter.document(text, "imagen")

@@ -16,10 +16,13 @@ class AttachmentStore(baseDir: File = AppDirs.filesDir) {
 
     private val dir: File = File(baseDir, DIR_NAME).apply { mkdirs() }
 
+    /** Fichero local del adjunto. El id se limpia para que no pueda salir de la carpeta. */
     fun file(id: String): File = File(dir, sanitize(id))
 
+    /** `true` si el adjunto está en disco y no está vacío. */
     fun exists(id: String): Boolean = file(id).let { it.exists() && it.length() > 0 }
 
+    /** Lee el contenido del adjunto. */
     fun read(id: String): ByteArray = file(id).readBytes()
 
     /** Escritura atómica: primero a un temporal y luego renombrado. */
@@ -33,24 +36,32 @@ class AttachmentStore(baseDir: File = AppDirs.filesDir) {
         }
     }
 
+    /** Borra el fichero del adjunto (no hace nada si no existe). */
     fun delete(id: String) {
         file(id).delete()
     }
 
     companion object {
+        /** Subcarpeta donde se guardan los adjuntos. */
         const val DIR_NAME = "attachments"
+        /** Prefijo de las referencias a adjuntos dentro del Markdown. */
         const val SCHEME = "attachment://"
 
+        /** Reconoce `attachment://<id>` y captura el id. */
         private val REF_REGEX = Regex("""attachment://([A-Za-z0-9_-]+)""")
 
+        /** Referencia Markdown para [id]: `attachment://<id>`. */
         fun reference(id: String): String = "$SCHEME$id"
 
+        /** Ids de todos los adjuntos citados en [markdown]. */
         fun referencedIds(markdown: String): Set<String> =
             REF_REGEX.findAll(markdown).map { it.groupValues[1] }.toSet()
 
+        /** Id del primer adjunto citado en [markdown] (sirve de miniatura en la lista), o `null`. */
         fun firstReferencedId(markdown: String): String? =
             REF_REGEX.find(markdown)?.groupValues?.get(1)
 
+        /** Como [file], pero sin instancia; usa la carpeta de datos de la app. */
         fun fileFor(id: String): File =
             File(File(AppDirs.filesDir, DIR_NAME), sanitize(id))
 
@@ -70,6 +81,7 @@ class AttachmentStore(baseDir: File = AppDirs.filesDir) {
             }
         }
 
+        /** Sustituye por `_` todo lo que no sea letra, número, `_` o `-`. */
         private fun sanitize(id: String): String = id.replace(Regex("[^A-Za-z0-9_-]"), "_")
     }
 }

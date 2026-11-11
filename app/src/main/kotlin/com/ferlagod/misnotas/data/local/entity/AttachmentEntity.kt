@@ -16,19 +16,24 @@ import androidx.room.PrimaryKey
  */
 @Entity(tableName = "attachments")
 data class AttachmentEntity(
+    /** Identificador único; es el que aparece en `attachment://<id>`. */
     @PrimaryKey
     @ColumnInfo(name = "id")
     val id: String,
 
+    /** Tipo MIME de la imagen (p. ej. `image/jpeg`). */
     @ColumnInfo(name = "mimeType")
     val mimeType: String,
 
+    /** Tamaño del fichero local en bytes. */
     @ColumnInfo(name = "size")
     val size: Long,
 
+    /** Fecha de creación (milisegundos desde la época Unix). */
     @ColumnInfo(name = "createdAt")
     val createdAt: Long = System.currentTimeMillis(),
 
+    /** `true` cuando la copia cifrada ya está en el servidor. */
     @ColumnInfo(name = "isUploaded")
     val isUploaded: Boolean = false
 )

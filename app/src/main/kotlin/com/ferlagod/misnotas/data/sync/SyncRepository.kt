@@ -39,16 +39,22 @@ import java.util.UUID
 import javax.crypto.SecretKey
 import javax.net.ssl.SSLException
 
+/** Fase de una sincronización en curso; [labelRes] es la clave del texto que la describe. */
 enum class SyncStage(val labelRes: String) {
     CONNECTING(R.string.sync_stage_connecting),
     DOWNLOADING(R.string.sync_stage_downloading),
     UPLOADING(R.string.sync_stage_uploading)
 }
 
+/** Estado de la sincronización que muestra la interfaz. */
 sealed interface SyncState {
+    /** Sin sincronizar (o sin cuenta conectada). */
     data object Idle : SyncState
+    /** Sincronizando; [stage] indica la fase actual. */
     data class Syncing(val stage: SyncStage = SyncStage.CONNECTING) : SyncState
     /**
+     * Sincronización terminada en [timestamp].
+     *
      * @param warnings ficheros remotos que no se pudieron leer.
      * @param protectedNotes notas que el servidor quería retirar en bloque y se han conservado
      *   (ver [SyncMerger.isMassRemoval]).
@@ -58,6 +64,7 @@ sealed interface SyncState {
         val warnings: Int = 0,
         val protectedNotes: Int = 0
     ) : SyncState
+    /** La última sincronización falló; [message] ya está traducido para mostrarlo. */
     data class Error(val message: String, val cause: Throwable? = null) : SyncState
 }
 
@@ -81,39 +88,59 @@ class SyncRepository private constructor() {
     private val tombstoneDao = database.remoteTombstoneDao()
     private val attachmentStore = AttachmentStore()
 
+    /** Credenciales y parámetros de la bóveda. */
     val authPreferences = AuthPreferences.getInstance()
+    /** Desbloqueo y verificación de la bóveda cifrada. */
     val vault = VaultManager(authPreferences)
 
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
+    /** Estado actual de la sincronización. */
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
 
+    /** Impide dos rondas a la vez; también protege la conexión de una cuenta. */
     private val syncMutex = Mutex()
 
+    /**
+     * Se pidió otra ronda (sincronización solicitada durante otra, o subida rechazada por un cambio remoto).
+     */
     @Volatile
     private var rerunRequested = false
+    /** Ficheros remotos que no se pudieron leer en esta sincronización. */
     private var warnings = 0
+    /** Notas que el freno de borrados masivos ha conservado en esta sincronización. */
     private var protectedNotes = 0
 
     companion object {
         private const val TAG = "SyncRepository"
+        /** Prefijo de los ficheros de carpeta en el servidor. */
         const val FOLDER_PREFIX = "folder_"
+        /** Prefijo de los ficheros de nota en el servidor. */
         const val NOTE_PREFIX = "note_"
+        /** Prefijo de los ficheros de adjunto en el servidor. */
         const val ATTACHMENT_PREFIX = "att_"
+        /** Extensión de los ficheros de notas y carpetas. */
         const val JSON_EXT = ".json"
+        /** Extensión de los adjuntos cifrados. */
         const val BIN_EXT = ".bin"
+        /** Rondas máximas por sincronización cuando se piden repeticiones. */
         private const val MAX_ROUNDS = 3
+        /** Tiempo que se conserva un adjunto sin usar antes de borrarlo (por si se deshace el cambio). */
         private const val ORPHAN_ATTACHMENT_GRACE_MS = 24L * 60 * 60 * 1000
 
         @Volatile
         private var INSTANCE: SyncRepository? = null
 
+        /** Instancia única de la app. */
         fun getInstance(): SyncRepository =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: SyncRepository().also { INSTANCE = it }
             }
 
+        /** Nombre del fichero remoto de una nota. */
         private fun noteFile(id: String) = "$NOTE_PREFIX$id$JSON_EXT"
+        /** Nombre del fichero remoto de una carpeta. */
         private fun folderFile(id: String) = "$FOLDER_PREFIX$id$JSON_EXT"
+        /** Nombre del fichero remoto de un adjunto. */
         private fun attachmentFile(id: String) = "$ATTACHMENT_PREFIX$id$BIN_EXT"
 
     }
@@ -151,10 +178,12 @@ class SyncRepository private constructor() {
         }
     }
 
+    /** Vuelve al estado inicial (p. ej. al desconectar la cuenta). */
     fun resetSyncState() {
         _syncState.value = SyncState.Idle
     }
 
+    /** Cliente WebDAV apuntando a la carpeta de la app de esa cuenta. */
     fun createClient(credentials: NextcloudCredentials): WebDavClient = WebDavClient(
         baseUrl = authPreferences.buildWebDavRootUrl(credentials),
         username = credentials.username,
@@ -211,6 +240,11 @@ class SyncRepository private constructor() {
     // Sincronización
     // ==================================================================
 
+    /**
+     * Sincroniza ahora. Si no hay cuenta o clave no hace nada. Si ya hay una sincronización en
+     * marcha, pide que repita una ronda al terminar y vuelve enseguida. Repite hasta [MAX_ROUNDS]
+     * rondas mientras haya cambios remotos que fusionar antes de subir.
+     */
     suspend fun synchronize(): Result<Unit> = withContext(Dispatchers.IO) {
         val credentials = authPreferences.getCredentials()
         val key = authPreferences.getDerivedKey()
@@ -248,6 +282,7 @@ class SyncRepository private constructor() {
         }
     }
 
+    /** Una ronda completa: comprueba la bóveda, descarga y fusiona, sube lo pendiente y limpia. */
     private suspend fun runRound(client: WebDavClient, key: SecretKey) {
         _syncState.value = SyncState.Syncing(SyncStage.CONNECTING)
         client.ensureRootFolder()
@@ -283,10 +318,12 @@ class SyncRepository private constructor() {
     // Descarga
     // ------------------------------------------------------------------
 
+    /** Ficheros remotos de un tipo, indexados por el id que llevan en el nombre. */
     private fun idsWithPrefix(remote: Map<String, RemoteFileMeta>, prefix: String, ext: String) =
         remote.values.filter { it.name.startsWith(prefix) && it.name.endsWith(ext) }
             .associateBy { it.name.removePrefix(prefix).removeSuffix(ext) }
 
+    /** Descarga y fusiona las carpetas que cambiaron en el servidor, y trata las que desaparecieron. */
     private suspend fun pullFolders(client: WebDavClient, key: SecretKey, remote: Map<String, RemoteFileMeta>) {
         val remoteFolders = idsWithPrefix(remote, FOLDER_PREFIX, JSON_EXT)
         val knownTombstones = tombstoneDao.getAll().associate { it.fileName to it.etag }
@@ -323,6 +360,11 @@ class SyncRepository private constructor() {
         }
     }
 
+    /**
+     * Descarga y fusiona las notas que cambiaron en el servidor. Las notas visibles que el servidor
+     * quiere retirar (lápidas o ficheros desaparecidos) se aplican al final, salvo que sean tantas
+     * que parezca un borrado en bloque (ver [SyncMerger.isMassRemoval]); entonces se conservan.
+     */
     private suspend fun pullNotes(client: WebDavClient, key: SecretKey, remote: Map<String, RemoteFileMeta>) {
         val remoteNotes = idsWithPrefix(remote, NOTE_PREFIX, JSON_EXT)
         val res = Strings
@@ -411,6 +453,7 @@ class SyncRepository private constructor() {
         class Missing(override val id: String) : PendingRemoval
     }
 
+    /** Aplica en la base de datos el resultado de fusionar una nota. */
     private suspend fun applyNoteAction(id: String, action: MergeAction<NoteEntity>) {
         when (action) {
             is MergeAction.SaveRemote -> noteDao.upsertNote(action.entity)
@@ -441,6 +484,7 @@ class SyncRepository private constructor() {
         Log.w(TAG, "Fichero no válido $name", e); warnings++; null
     }
 
+    /** Descarga los adjuntos que citan las notas y aún no están en este dispositivo. */
     private suspend fun downloadMissingAttachments(
         client: WebDavClient,
         key: SecretKey,
@@ -463,6 +507,7 @@ class SyncRepository private constructor() {
     // Subida
     // ------------------------------------------------------------------
 
+    /** Sube las carpetas pendientes y las lápidas de las carpetas borradas. */
     private suspend fun pushFolders(client: WebDavClient, key: SecretKey, remote: Map<String, RemoteFileMeta>) {
         for (folder in folderDao.getFoldersBySyncStatus(SyncStatus.PENDING_UPLOAD)) {
             val name = folderFile(folder.id)
@@ -486,6 +531,7 @@ class SyncRepository private constructor() {
         }
     }
 
+    /** Sube cifrados los adjuntos pendientes. Nunca sobrescribe: si ya existe, se da por subido. */
     private suspend fun pushAttachments(client: WebDavClient, key: SecretKey) {
         for (attachment in attachmentDao.getPendingUpload()) {
             if (!attachmentStore.exists(attachment.id)) {
@@ -502,6 +548,10 @@ class SyncRepository private constructor() {
         }
     }
 
+    /**
+     * Sube las notas pendientes y las lápidas de las notas borradas definitivamente.
+     * Si una nota nunca llegó al servidor, se borra sin subir lápida.
+     */
     private suspend fun pushNotes(client: WebDavClient, key: SecretKey, remote: Map<String, RemoteFileMeta>) {
         for (note in noteDao.getNotesBySyncStatus(SyncStatus.PENDING_UPLOAD)) {
             val name = noteFile(note.id)
@@ -526,6 +576,7 @@ class SyncRepository private constructor() {
         }
     }
 
+    /** ETag devuelto por una subida correcta (puede ser `null` si el servidor no lo da). */
     private class Etag(val value: String?)
 
     /**

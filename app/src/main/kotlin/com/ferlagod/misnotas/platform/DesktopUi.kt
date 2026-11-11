@@ -28,11 +28,15 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 /** Pila de manejadores de "atrás"; gana el último registrado y activo (como en Android). */
 class BackDispatcher {
+    /** Manejador registrado; [enabled] se actualiza en cada recomposición. */
     internal class Entry(var enabled: Boolean, var onBack: () -> Unit)
 
+    /** Manejadores en orden de registro. */
     private val entries = CopyOnWriteArrayList<Entry>()
 
+    /** Registra un manejador (queda el último, con prioridad). */
     internal fun add(entry: Entry) = entries.add(entry)
+    /** Quita un manejador. */
     internal fun remove(entry: Entry) = entries.remove(entry)
 
     /** Devuelve true si algún manejador ha atendido el "atrás". */
@@ -43,6 +47,7 @@ class BackDispatcher {
     }
 }
 
+/** Pila de "atrás" de la ventana; la ventana principal la conecta con la tecla Esc. */
 val LocalBackDispatcher = staticCompositionLocalOf { BackDispatcher() }
 
 /** Equivalente a `BackHandler` de androidx.activity. */
@@ -67,11 +72,15 @@ fun BackHandler(enabled: Boolean = true, onBack: () -> Unit) {
  * cerrar. El editor se registra aquí para guardar lo escrito (equivale a ON_STOP en Android).
  */
 object AppLifecycle {
+    /** Funciones a llamar cuando la app pasa a segundo plano. */
     private val listeners = CopyOnWriteArrayList<() -> Unit>()
 
+    /** Registra una función que se llamará al pasar a segundo plano. */
     fun addBackgroundListener(listener: () -> Unit) = listeners.add(listener)
+    /** Quita una función registrada con [addBackgroundListener]. */
     fun removeBackgroundListener(listener: () -> Unit) = listeners.remove(listener)
 
+    /** Avisa a todos los registrados; lo llama la ventana al perder el foco, minimizarse o cerrarse. */
     fun notifyBackground() = listeners.forEach { it() }
 }
 
@@ -90,6 +99,7 @@ fun OnAppBackground(onBackground: () -> Unit) {
 // Recursos
 // -------------------------------------------------------------------------------------------
 
+/** Imágenes de recursos ya decodificadas, por ruta. */
 private val imageCache = ConcurrentHashMap<String, ImageBitmap>()
 
 /** Carga una imagen de `resources/` (p. ej. "drawable/ic_logo_round.png"). */
@@ -99,11 +109,15 @@ fun loadResourceImage(path: String): ImageBitmap = imageCache.getOrPut(path) {
     org.jetbrains.skia.Image.makeFromEncoded(bytes).toComposeImageBitmap()
 }
 
+/** Equivalente a `painterResource` de Android para imágenes de `resources/`. */
 @Composable
 fun painterResource(path: String): Painter = remember(path) { BitmapPainter(loadResourceImage(path)) }
 
+/** Rutas de las imágenes incluidas en `resources/`. */
 object Drawables {
+    /** Logotipo redondo (pantalla de conexión y "Acerca de"). */
     const val LOGO_ROUND = "drawable/ic_logo_round.png"
+    /** Icono de la app sin fondo. */
     const val LAUNCHER_FOREGROUND = "drawable/ic_launcher_foreground.png"
 }
 
@@ -111,7 +125,9 @@ object Drawables {
 // Portapapeles
 // -------------------------------------------------------------------------------------------
 
+/** Portapapeles del sistema. */
 object Clipboard {
+    /** Copia [text] al portapapeles; si falla, solo lo anota en el registro. */
     fun copyText(text: String) {
         try {
             Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null)

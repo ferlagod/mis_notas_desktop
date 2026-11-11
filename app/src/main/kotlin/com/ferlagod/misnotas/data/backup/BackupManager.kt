@@ -123,6 +123,7 @@ class BackupManager {
         return notes.size
     }
 
+    /** Extensión del fichero de imagen según el tipo MIME registrado del adjunto. */
     private suspend fun extensionFor(id: String): String =
         when (attachmentDao.getById(id)?.mimeType) {
             "image/png" -> ".png"
@@ -135,6 +136,10 @@ class BackupManager {
     // Importar
     // ------------------------------------------------------------------
 
+    /**
+     * Importa ZIP de copia de seguridad y ficheros `.md`, `.markdown` o `.txt` sueltos.
+     * Los ficheros con otra extensión o que no se pueden leer cuentan como omitidos.
+     */
     suspend fun import(files: List<File>): ImportResult = withContext(Dispatchers.IO) {
         var imported = 0
         var skipped = 0
@@ -162,6 +167,10 @@ class BackupManager {
         ImportResult(imported, skipped)
     }
 
+    /**
+     * Importa un ZIP: recrea su estructura de carpetas, guarda como adjuntos las imágenes del ZIP
+     * que citan las notas y reescribe esos enlaces a `attachment://<id>`.
+     */
     private suspend fun importZip(uri: File): ImportResult {
         // Se lee todo primero para poder resolver las imágenes referenciadas desde las notas.
         val entries = LinkedHashMap<String, ByteArray>()
@@ -226,6 +235,7 @@ class BackupManager {
         return ImportResult(imported, skipped)
     }
 
+    /** Guarda una imagen del ZIP como adjunto nuevo y devuelve su id. */
     private suspend fun storeAttachment(bytes: ByteArray, path: String): String {
         val id = UUID.randomUUID().toString()
         attachmentStore.write(id, bytes)
@@ -258,6 +268,7 @@ class BackupManager {
         return parentId
     }
 
+    /** Crea una nota nueva, pendiente de subir, a partir de un fichero importado. */
     private suspend fun insertNote(parsed: ParsedMarkdownNote, folderId: String?) {
         database.withTransaction {
             noteDao.upsertNote(
@@ -276,8 +287,13 @@ class BackupManager {
 
     // ------------------------------------------------------------------
 
+    /** Abre el fichero para leerlo. */
     private fun openStream(file: File): InputStream = file.inputStream()
 
+    /**
+     * Lee todo [input] y lanza [IOException] si supera [limit] bytes (protege frente a ficheros
+     * enormes o bombas ZIP). Con [closeStream] = false no lo cierra (entradas de un ZIP).
+     */
     private fun readLimited(input: InputStream, limit: Long, closeStream: Boolean = true): ByteArray {
         val out = ByteArrayOutputStream()
         val buffer = ByteArray(16 * 1024)
@@ -295,14 +311,23 @@ class BackupManager {
     }
 
     companion object {
+        /** Carpeta de las imágenes dentro del ZIP. */
         const val ATTACHMENTS_DIR = "attachments"
+        /** Subcarpeta de Descargas para las copias automáticas. */
         private const val SAFETY_DIR = "MisNotas"
+        /** Tamaño máximo de un fichero de nota suelto. */
         private const val MAX_NOTE_BYTES = 10L * 1024 * 1024
+        /** Tamaño máximo de cada entrada de un ZIP. */
         private const val MAX_ENTRY_BYTES = 30L * 1024 * 1024
+        /** Tamaño máximo descomprimido de todo el ZIP. */
         private const val MAX_ZIP_BYTES = 500L * 1024 * 1024
 
+        /** Imagen Markdown `![texto](ruta)`; captura el texto y la ruta. */
         private val IMAGE_LINK = Regex("""!\[([^\]]*)]\(([^)\s]+)\)""")
 
+        /**
+         * Primera línea con texto, sin marcas de Markdown y recortada a 60 caracteres; sirve de nombre si la nota no tiene título.
+         */
         private fun firstLine(content: String): String? =
             content.lineSequence().map { it.trim().trimStart('#', '-', '>', ' ') }.firstOrNull { it.isNotBlank() }?.take(60)
 

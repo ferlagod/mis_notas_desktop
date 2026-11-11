@@ -183,17 +183,26 @@ import java.util.UUID
  * (se corta tras una pausa, un espacio o un salto de línea), como los editores de texto habituales.
  */
 private class EditHistory {
+    /** Estados anteriores (para deshacer). */
     private val undoStack = ArrayDeque<TextFieldValue>()
+    /** Estados deshechos (para rehacer). */
     private val redoStack = ArrayDeque<TextFieldValue>()
+    /** Momento del último cambio registrado, en ms; sirve para agrupar lo escrito seguido. */
     private var lastRecord = 0L
 
     /** Cambia con cada operación para que la interfaz se recomponga. */
     var version by mutableIntStateOf(0)
         private set
 
+    /** Hay algo que deshacer. */
     val canUndo get() = version >= 0 && undoStack.isNotEmpty()
+    /** Hay algo que rehacer. */
     val canRedo get() = version >= 0 && redoStack.isNotEmpty()
 
+    /**
+     * Registra el cambio de [before] a [after]. Empieza un paso nuevo si se pide ([force]), si pasa
+     * más de 1,2 s, si cambia más de un carácter o si se acaba de escribir un espacio o salto de línea.
+     */
     fun record(before: TextFieldValue, after: TextFieldValue, force: Boolean = false) {
         if (before.text == after.text) return
         val now = System.nanoTime() / 1_000_000
@@ -210,6 +219,7 @@ private class EditHistory {
         version++
     }
 
+    /** Vuelve al estado anterior; `null` si no hay. [current] pasa a la pila de rehacer. */
     fun undo(current: TextFieldValue): TextFieldValue? {
         val previous = undoStack.removeLastOrNull() ?: return null
         redoStack.addLast(current.copy(composition = null))
@@ -218,6 +228,7 @@ private class EditHistory {
         return previous
     }
 
+    /** Rehace el último paso deshecho; `null` si no hay. */
     fun redo(current: TextFieldValue): TextFieldValue? {
         val next = redoStack.removeLastOrNull() ?: return null
         undoStack.addLast(current.copy(composition = null))
@@ -227,13 +238,27 @@ private class EditHistory {
     }
 
     private companion object {
+        /** Pasos máximos que se guardan. */
         const val MAX = 200
     }
 }
 
+/** Aplica una [TextEdit]: texto nuevo y su selección. */
 private fun TextFieldValue.apply(edit: TextEdit) =
     TextFieldValue(edit.text, TextRange(edit.selectionStart, edit.selectionEnd))
 
+/**
+ * Editor de una nota: título, cuerpo Markdown con formato visual, barra de formato, carpeta,
+ * color y fijado. Guarda automáticamente al segundo de dejar de escribir y al salir.
+ *
+ * @param noteId nota a editar; `null` para una nueva.
+ * @param folderId carpeta de la nota nueva.
+ * @param initialPinned si la nota nueva empieza fijada.
+ * @param existingNote la nota ya leída de la base de datos (o `null` si es nueva).
+ * @param noteLoaded la lectura de la nota ha terminado (hasta entonces no se guarda nada).
+ * @param onDuplicateNote duplica la nota y devuelve el id de la copia.
+ * @param onAddImage guarda una imagen como adjunto y devuelve su referencia `attachment://<id>`.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteEditorScreen(
@@ -364,11 +389,16 @@ fun NoteEditorScreen(
         }
     }
 
+    /**
+     * Guarda la nota tal como está (con el Markdown normalizado). No hace nada si aún no se ha
+     * cargado o si se acaba de eliminar.
+     */
     fun persistChanges(sync: Boolean, closing: Boolean = false) {
         if (!loaded || deleted) return
         onSaveNote(stableId, title, normalizeMarkdown(textValue.text), selectedFolderId, selectedColor, isPinned, sync, closing)
     }
 
+    /** Guarda, sincroniza y sale del editor. */
     fun close() {
         persistChanges(sync = true, closing = true)
         onBack()
@@ -385,21 +415,27 @@ fun NoteEditorScreen(
         }
     }
 
-    // Guardar al salir con el gesto/botón "atrás" del sistema y al pasar a segundo plano
+    // Guardar al salir con "atrás" (tecla Esc).
     BackHandler { close() }
     // Al minimizar la ventana, perder el foco o cerrar la app.
     OnAppBackground { persistChanges(sync = true) }
     // Al cerrar el editor sin pasar por "atrás" (p. ej. cambiar de nota en el panel lateral
-    // de un plegable) se guarda también lo escrito en el último segundo.
+    // de una ventana ancha) se guarda también lo escrito en el último segundo.
     DisposableEffect(Unit) { onDispose { persistChanges(sync = true) } }
 
+    /** Cambia el cuerpo registrando el paso en el historial. */
     fun updateBody(newValue: TextFieldValue, forceHistory: Boolean = false) {
         history.record(textValue, newValue, forceHistory)
         textValue = newValue
     }
 
+    /** Aplica una edición de formato como un paso propio del historial. */
     fun applyEdit(edit: TextEdit) = updateBody(textValue.apply(edit), forceHistory = true)
 
+    /**
+     * Recibe cada cambio del campo de texto y lo corrige para que el Markdown oculto siga siendo
+     * coherente (marcadores sueltos, listas, formato pendiente…).
+     */
     fun onBodyChange(newValue: TextFieldValue) {
         val old = textValue
         if (newValue.text == old.text) {
@@ -440,6 +476,10 @@ fun NoteEditorScreen(
         updateBody(newValue)
     }
 
+    /**
+     * Activa o quita negrita, cursiva, tachado o código. Sin selección, el formato queda pendiente
+     * y se aplica a lo siguiente que se escriba.
+     */
     fun toggleInline(kind: InlineKind) {
         val sel = textValue.selection
         val presentation = docCache.get(textValue.text).presentation
@@ -457,6 +497,7 @@ fun NoteEditorScreen(
         runCatching { bodyFocus.requestFocus() }
     }
 
+    /** Pone el título [prefix] en las líneas seleccionadas, o lo quita si ya lo tienen (o con `null`). */
     fun setHeading(prefix: LinePrefix?) {
         val sel = textValue.selection
         val current = lineBlockAt(textValue.text, sel.min)
@@ -469,6 +510,7 @@ fun NoteEditorScreen(
         )
     }
 
+    /** Abre el diálogo de enlace: edita el enlace bajo el cursor o crea uno con el texto seleccionado. */
     fun openLinkDialog() {
         val sel = textValue.selection
         val presentation = docCache.get(textValue.text).presentation
@@ -525,21 +567,28 @@ fun NoteEditorScreen(
         return false
     }
 
+    /** Pone o quita un formato de bloque (lista, tarea, cita) en las líneas seleccionadas. */
     fun linePrefix(prefix: LinePrefix) {
         val sel = textValue.selection
         applyEdit(toggleLinePrefix(textValue.text, sel.min, sel.max, prefix))
     }
 
+    /** Rodea la selección con [prefix] y [suffix], o los quita si ya la rodean. */
     fun wrap(prefix: String, suffix: String = prefix) {
         val sel = textValue.selection
         applyEdit(toggleWrap(textValue.text, sel.min, sel.max, prefix, suffix))
     }
 
+    /** Inserta [snippet] en el cursor, sustituyendo la selección. */
     fun insert(snippet: String) {
         val sel = textValue.selection
         applyEdit(insertAtCursor(textValue.text, sel.min, sel.max, snippet))
     }
 
+    /**
+     * Comprime y adjunta las imágenes, e inserta sus referencias en el cursor (cada una en su línea).
+     * Las que fallan se avisan con un mensaje.
+     */
     fun addImages(uris: List<File>) {
         if (uris.isEmpty()) return
         coroutineScope.launch {
@@ -1043,6 +1092,7 @@ private fun ImageSizeDialog(
 /** Datos del diálogo de enlace: texto, dirección y el enlace que se edita (si ya existía). */
 private data class LinkDialogState(val label: String, val url: String, val existing: InlineToken?)
 
+/** Diálogo para crear o editar un enlace. [onRemove] (solo al editar) quita el enlace y deja el texto. */
 @Composable
 private fun LinkDialog(
     state: LinkDialogState,
@@ -1090,6 +1140,7 @@ private fun LinkDialog(
 /** Ancho máximo del texto de la nota, para que las líneas no sean incómodas de leer. */
 val READABLE_MAX_WIDTH = 760.dp
 
+/** Nota como texto legible: título y cuerpo sin marcas de Markdown ni imágenes adjuntas. */
 private fun noteAsPlainText(title: String, content: String): String =
     listOf(title.trim(), markdownPlainText(content).trim()).filter { it.isNotEmpty() }.joinToString("\n\n")
 
@@ -1107,6 +1158,7 @@ private fun saveNoteAsMarkdown(dialogTitle: String, fileName: String, title: Str
     }
 }
 
+/** Copia la nota como texto al portapapeles. */
 private fun copyNote(title: String, content: String) {
     Clipboard.copyText(noteAsPlainText(title, content))
 }
@@ -1114,6 +1166,7 @@ private fun copyNote(title: String, content: String) {
 /** Imágenes que se pueden añadir de una vez (como el selector de fotos de Android). */
 private const val MAX_IMAGES_AT_ONCE = 10
 
+/** Chip de la barra de metadatos (carpeta o color) que abre su selector. */
 @Composable
 private fun MetaChip(
     icon: ImageVector,
@@ -1145,6 +1198,10 @@ private fun MetaChip(
     }
 }
 
+/**
+ * Barra de formato del editor: deshacer y rehacer, títulos, formato en línea, listas, cita,
+ * código, enlace, separador e imagen. [activeInline] y [activeBlock] resaltan lo que ya está aplicado.
+ */
 @Composable
 private fun FormattingToolbar(
     canUndo: Boolean,
@@ -1221,6 +1278,7 @@ private fun FormattingToolbar(
     }
 }
 
+/** Separador vertical entre grupos de botones. */
 @Composable
 private fun ToolbarDivider() {
     VerticalDivider(modifier = Modifier
@@ -1228,6 +1286,7 @@ private fun ToolbarDivider() {
         .padding(horizontal = 4.dp))
 }
 
+/** Opción del menú de títulos, con el texto al tamaño que tendrá. */
 @Composable
 private fun HeadingMenuItem(label: String, size: androidx.compose.ui.unit.TextUnit, selected: Boolean, bold: Boolean = true, onClick: () -> Unit) {
     DropdownMenuItem(
@@ -1243,6 +1302,7 @@ private fun HeadingMenuItem(label: String, size: androidx.compose.ui.unit.TextUn
     )
 }
 
+/** Botón de la barra de formato; [active] lo resalta si el formato ya está aplicado. */
 @Composable
 private fun ToolbarButton(
     icon: ImageVector,

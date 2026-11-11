@@ -8,6 +8,9 @@ import java.io.IOException
 
 /** Error HTTP devuelto por el servidor WebDAV. */
 open class WebDavException(val code: Int, message: String, val reason: Reason = Reason.HTTP) : IOException(message) {
+    /**
+     * Motivo del error: un código HTTP cualquiera o que la ruta del servidor no existe (409 al crear la carpeta).
+     */
     enum class Reason { HTTP, PATH_NOT_FOUND }
 }
 

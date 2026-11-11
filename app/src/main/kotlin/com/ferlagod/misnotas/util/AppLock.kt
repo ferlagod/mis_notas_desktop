@@ -27,13 +27,16 @@ object AppLock {
 
     private const val KEY_HASH = "app_lock_hash"
     private const val KEY_SALT = "app_lock_salt"
+    /** Iteraciones de PBKDF2 del hash de la contraseña de bloqueo. */
     private const val ITERATIONS = 210_000
 
+    /** Almacén cifrado compartido con las credenciales. */
     private val store: SecureStore get() = AuthPreferences.secureStore
 
     /** Hay una contraseña configurada (requisito para el bloqueo). */
     fun isAvailable(): Boolean = store.getString(KEY_HASH) != null
 
+    /** Guarda (o cambia) la contraseña de bloqueo, con un salt nuevo. */
     fun setPassword(password: String) {
         val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
         val encoder = Base64.getEncoder()
@@ -43,11 +46,13 @@ object AppLock {
         }
     }
 
+    /** Elimina la contraseña de bloqueo. */
     fun clearPassword() = store.edit {
         remove(KEY_HASH)
         remove(KEY_SALT)
     }
 
+    /** `true` si [password] es la contraseña de bloqueo. Compara en tiempo constante. */
     fun verify(password: String): Boolean {
         val decoder = Base64.getDecoder()
         val salt = store.getString(KEY_SALT)?.let(decoder::decode) ?: return false
@@ -55,6 +60,7 @@ object AppLock {
         return MessageDigest.isEqual(hash(password, salt), expected)
     }
 
+    /** Hash PBKDF2-HMAC-SHA256 de 256 bits. */
     private fun hash(password: String, salt: ByteArray): ByteArray {
         val spec = PBEKeySpec(password.toCharArray(), salt, ITERATIONS, 256)
         try {

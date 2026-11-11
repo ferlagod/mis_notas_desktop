@@ -69,6 +69,7 @@ fun toggleLinePrefix(text: String, selStart: Int, selEnd: Int, prefix: LinePrefi
     }
 }
 
+/** `true` si [line] ya tiene el formato de bloque [prefix] (ignorando la sangría). */
 private fun lineHasPrefix(line: String, prefix: LinePrefix): Boolean {
     val trimmed = line.trimStart()
     return when (prefix) {

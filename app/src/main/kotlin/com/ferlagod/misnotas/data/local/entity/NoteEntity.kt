@@ -34,25 +34,32 @@ import java.util.UUID
     ]
 )
 data class NoteEntity(
+    /** Identificador único (UUID); también da nombre al fichero remoto. */
     @PrimaryKey
     @ColumnInfo(name = "id")
     val id: String = UUID.randomUUID().toString(),
 
+    /** Carpeta que contiene la nota; `null` = sin carpeta ("Todas las notas"). */
     @ColumnInfo(name = "folderId")
     val folderId: String? = null,
 
+    /** Título (puede estar vacío). */
     @ColumnInfo(name = "title")
     val title: String,
 
+    /** Cuerpo en Markdown. Las imágenes se referencian como `attachment://<id>`. */
     @ColumnInfo(name = "content")
     val content: String,
 
+    /** Fijada al principio de la lista. */
     @ColumnInfo(name = "isPinned")
     val isPinned: Boolean = false,
 
+    /** Clave del color (ver `NoteColor`). */
     @ColumnInfo(name = "color")
     val color: String = NoteColor.DEFAULT.key,
 
+    /** Última modificación (milisegundos desde la época Unix); decide qué versión gana al sincronizar. */
     @ColumnInfo(name = "updatedAt")
     val updatedAt: Long = System.currentTimeMillis(),
 

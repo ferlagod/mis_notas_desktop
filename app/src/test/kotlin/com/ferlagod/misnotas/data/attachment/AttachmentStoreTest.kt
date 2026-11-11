@@ -7,6 +7,7 @@ package com.ferlagod.misnotas.data.attachment
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
+/** Detección del tipo de imagen de los adjuntos por sus primeros bytes. */
 class AttachmentStoreTest {
 
     private fun bytes(vararg values: Int) = ByteArray(values.size) { values[it].toByte() }

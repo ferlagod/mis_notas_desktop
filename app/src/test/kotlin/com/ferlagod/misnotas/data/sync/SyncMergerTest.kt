@@ -12,6 +12,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/** Reglas de fusión de la sincronización: conflictos, lápidas y ficheros desaparecidos. */
 class SyncMergerTest {
 
     private fun note(

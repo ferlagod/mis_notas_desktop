@@ -23,13 +23,17 @@ import kotlin.math.roundToInt
  */
 object ImageCompressor {
 
+    /** Lado máximo de la imagen resultante, en píxeles. */
     const val MAX_DIMENSION_PX = 1600
+    /** Calidad de compresión (0-100). */
     const val COMPRESSION_QUALITY = 75
+    /** Tipo MIME de las imágenes comprimidas. */
     const val MIME_TYPE = "image/webp"
 
     /** Límite de lectura: evita cargar ficheros absurdamente grandes en memoria. */
     private const val MAX_INPUT_BYTES = 80L * 1024 * 1024
 
+    /** Comprime una imagen del disco. Lanza [IllegalArgumentException] si está vacía o supera el límite. */
     suspend fun compressImage(
         file: File,
         maxDimensionPx: Int = MAX_DIMENSION_PX,
@@ -39,6 +43,10 @@ object ImageCompressor {
         compressBytes(file.readBytes(), maxDimensionPx, quality)
     }
 
+    /**
+     * Reduce la imagen para que su lado mayor no pase de [maxDimensionPx] y la codifica en WebP
+     * (o en JPEG si WebP no está disponible). Las imágenes pequeñas no se amplían.
+     */
     fun compressBytes(
         bytes: ByteArray,
         maxDimensionPx: Int = MAX_DIMENSION_PX,

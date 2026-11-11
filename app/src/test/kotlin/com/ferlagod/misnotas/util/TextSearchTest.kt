@@ -8,6 +8,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/** Búsqueda sin acentos ni mayúsculas y resaltado de coincidencias. */
 class TextSearchTest {
 
     @Test

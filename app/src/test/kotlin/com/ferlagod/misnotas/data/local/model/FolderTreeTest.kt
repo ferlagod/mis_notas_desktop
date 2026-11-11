@@ -10,6 +10,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/** Árbol de carpetas: descendientes, ciclos, aplanado y rutas. */
 class FolderTreeTest {
 
     private fun folder(id: String, parent: String? = null, name: String = id) = FolderEntity(id = id, parentId = parent, name = name)

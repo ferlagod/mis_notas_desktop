@@ -12,6 +12,7 @@ import java.util.Locale
  * Idiomas disponibles en la app. [nativeName] se muestra siempre en el propio idioma.
  */
 enum class AppLanguage(val tag: String, val nativeName: String) {
+    /** El idioma del sistema operativo. */
     SYSTEM("", ""),
     SPANISH("es", "Español"),
     ENGLISH("en", "English"),
@@ -20,6 +21,7 @@ enum class AppLanguage(val tag: String, val nativeName: String) {
     ITALIAN("it", "Italiano");
 
     companion object {
+        /** Idioma de una etiqueta guardada ("es", "en-GB"…); [SYSTEM] si está vacía o no se reconoce. */
         fun fromTag(tag: String?): AppLanguage {
             if (tag.isNullOrBlank()) return SYSTEM
             val language = Locale.forLanguageTag(tag).language
@@ -34,21 +36,25 @@ enum class AppLanguage(val tag: String, val nativeName: String) {
  */
 object LanguageManager {
 
+    /** Clave del idioma en `settings.properties`. */
     private const val KEY_LANGUAGE = "app_language"
 
     /** Idioma del sistema, capturado al arrancar (antes de cambiar el `Locale` por defecto). */
     private val systemLocale: Locale = Locale.getDefault()
 
+    /** Idioma elegido (o [AppLanguage.SYSTEM]). */
     fun current(): AppLanguage = AppLanguage.fromTag(AppSettings.store.getString(KEY_LANGUAGE))
 
     /** Aplica el idioma guardado; se llama al arrancar. */
     fun apply() = Strings.applyLocale(localeFor(current()))
 
+    /** Guarda el idioma y lo aplica al instante. */
     fun set(language: AppLanguage) {
         AppSettings.store.edit { putString(KEY_LANGUAGE, language.tag) }
         Strings.applyLocale(localeFor(language))
     }
 
+    /** `Locale` que corresponde a [language]. */
     private fun localeFor(language: AppLanguage): Locale =
         if (language == AppLanguage.SYSTEM) systemLocale else Locale.forLanguageTag(language.tag)
 }

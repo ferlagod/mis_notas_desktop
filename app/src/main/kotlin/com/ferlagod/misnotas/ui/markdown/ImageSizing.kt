@@ -13,10 +13,14 @@ package com.ferlagod.misnotas.ui.markdown
  * dispositivo, y los demás editores Markdown ignoran el fragmento.
  */
 object ImageSizing {
+    /** Ancho por defecto: todo el disponible. */
     const val DEFAULT_PERCENT = 100
+    /** Ancho mínimo permitido. */
     const val MIN_PERCENT = 20
 
+    /** Fragmento `#w=<n>` al final de la dirección. */
     private val SIZE_SUFFIX = Regex("""#w=(\d{1,3})$""")
+    /** Imagen Markdown `![texto](dirección)`. */
     private val IMAGE_MARKDOWN = Regex("""!\[(.*?)]\((.*?)\)""")
 
     /** Ancho (en % del disponible) indicado en [source]; [DEFAULT_PERCENT] si no lo indica. */

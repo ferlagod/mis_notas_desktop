@@ -15,6 +15,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 
+/** Formato remoto cifrado: ida y vuelta, metadatos ocultos, ligado al id y lápidas verificadas. */
 class RemoteCodecTest {
 
     private val key = CryptoManager.deriveKey("SyncTestMasterPassword2026", CryptoManager.generateSalt())

@@ -14,6 +14,7 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
+/** Colores del tema claro. */
 private val LightColorScheme = lightColorScheme(
     primary = BrandGreen,
     onPrimary = Color.White,
@@ -35,6 +36,7 @@ private val LightColorScheme = lightColorScheme(
     onError = Color.White
 )
 
+/** Colores del tema oscuro (gris). */
 private val DarkColorScheme = darkColorScheme(
     primary = BrandGreenLight,
     onPrimary = Color(0xFF1C2E08),
@@ -73,6 +75,10 @@ val LocalDarkTheme = staticCompositionLocalOf { false }
 @ReadOnlyComposable
 fun isAppInDarkTheme(): Boolean = LocalDarkTheme.current
 
+/**
+ * Tema de la app: colores (claro, oscuro o AMOLED), tipografía y formas. También publica
+ * [LocalDarkTheme] para que las pantallas sepan si el tema es oscuro.
+ */
 @Composable
 fun MisNotasTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),

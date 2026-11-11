@@ -58,17 +58,31 @@ import com.ferlagod.misnotas.util.AppLanguage
 import kotlinx.coroutines.launch
 import java.util.UUID
 
+/** Rutas de las pantallas. */
 object AppDestinations {
+    /** Conexión con Nextcloud o desbloqueo de la bóveda. */
     const val LOGIN = "login"
+    /** Pantalla principal: carpetas y, en ventanas anchas, la lista de notas al lado. */
     const val FOLDERS = "folders"
+    /** Lista de notas del filtro actual. */
     const val NOTES = "notes"
+    /** Ajustes. */
     const val SETTINGS = "settings"
+    /** Editor; todos los argumentos son opcionales (ver [editorRoute]). */
     const val EDITOR = "editor?noteId={noteId}&folderId={folderId}&pin={pin}"
 
+    /** Ruta del editor. Sin [noteId] crea una nota nueva, en [folderId] y fijada si [pin] es `true`. */
     fun editorRoute(noteId: String? = null, folderId: String? = null, pin: Boolean = false): String =
         "editor?noteId=${noteId.orEmpty()}&folderId=${folderId.orEmpty()}&pin=$pin"
 }
 
+/**
+ * Raíz de la interfaz: conecta el ViewModel con las pantallas, muestra los avisos (snackbars)
+ * y decide a qué pantalla ir según el estado de la cuenta y de la bóveda.
+ *
+ * @param appLocked la pantalla de bloqueo de la app está encima; no se navega mientras tanto.
+ * @param onAppLockChange activa (con contraseña) o desactiva el bloqueo de la app.
+ */
 @Composable
 internal fun AppNavigationHost(
     viewModel: MainViewModel,
@@ -120,7 +134,7 @@ internal fun AppNavigationHost(
         }
     }
 
-    // Control de navegación automático según estado de bloqueo de la bóveda
+    // Si la bóveda se bloquea, se vuelve a la pantalla de contraseña.
     LaunchedEffect(isUnlocked, isConfigured) {
         if (isConfigured && !isUnlocked) {
             navController.navigate(AppDestinations.LOGIN) {
@@ -129,7 +143,7 @@ internal fun AppNavigationHost(
         }
     }
 
-    // Accesos directos y notas creadas desde "Compartir" (cuando la app está desbloqueada)
+    // Menú de la ventana y atajos de teclado (solo cuando la app está desbloqueada).
     LaunchedEffect(pendingNavigation, isUnlocked, appLocked) {
         val target = pendingNavigation ?: return@LaunchedEffect
         if (appLocked || (isConfigured && !isUnlocked)) return@LaunchedEffect
@@ -142,6 +156,7 @@ internal fun AppNavigationHost(
         }
     }
 
+    /** Va a la pantalla principal y quita la de conexión de la pila. */
     fun NavHostController.goHome() = navigate(AppDestinations.FOLDERS) {
         popUpTo(AppDestinations.LOGIN) { inclusive = true }
     }

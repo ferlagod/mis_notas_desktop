@@ -9,10 +9,15 @@ import java.time.format.DateTimeParseException
 
 /** Nota leída de un fichero Markdown con cabecera YAML opcional. */
 data class ParsedMarkdownNote(
+    /** Título de la cabecera, o el nombre del fichero si no tiene. */
     val title: String,
+    /** Cuerpo Markdown, sin la cabecera. */
     val content: String,
+    /** `pinned: true` en la cabecera. */
     val isPinned: Boolean = false,
+    /** Clave del color en mayúsculas, o `null` si no viene. */
     val color: String? = null,
+    /** Fecha `updated` en milisegundos, o `null` si falta o no es válida. */
     val updatedAt: Long? = null
 )
 
@@ -36,6 +41,10 @@ object MarkdownFile {
     /** Marca de orden de bytes que algunos editores añaden al principio de los ficheros UTF-8. */
     private val BOM = 0xFEFF.toChar().toString()
 
+    /**
+     * Genera el fichero `.md` de una nota: cabecera con los metadatos y después el contenido.
+     * `pinned` y `color` solo se escriben si no tienen el valor por defecto.
+     */
     fun write(title: String, content: String, isPinned: Boolean, color: String, updatedAt: Long): String = buildString {
         append("---\n")
         append("title: ").append(quote(title)).append('\n')
@@ -97,9 +106,11 @@ object MarkdownFile {
         return candidate
     }
 
+    /** Entrecomilla un valor de la cabecera, escapando `\` y `"` y sustituyendo saltos de línea. */
     private fun quote(value: String): String =
         "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ") + "\""
 
+    /** Quita las comillas dobles o simples de un valor de la cabecera y deshace el escape. */
     private fun unquote(value: String): String {
         val v = value.trim()
         return when {
@@ -111,6 +122,7 @@ object MarkdownFile {
         }
     }
 
+    /** Lee una fecha ISO-8601 (`2026-11-08T10:15:00Z`); `null` si no es válida. */
     private fun parseInstant(value: String): Long? = try {
         Instant.parse(value).toEpochMilli()
     } catch (_: DateTimeParseException) {

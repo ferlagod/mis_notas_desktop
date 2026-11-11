@@ -11,6 +11,7 @@ import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import javax.imageio.ImageIO
 
+/** Compresión de imágenes a WebP: tamaño máximo y orientación EXIF. */
 class ImageCompressorTest {
 
     private fun jpeg(width: Int, height: Int): ByteArray {

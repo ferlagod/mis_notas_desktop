@@ -7,6 +7,7 @@ package com.ferlagod.misnotas.ui.markdown
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
+/** Lector de Markdown: tareas, vista previa, enlaces y texto plano. */
 class MarkdownTest {
 
     @Test

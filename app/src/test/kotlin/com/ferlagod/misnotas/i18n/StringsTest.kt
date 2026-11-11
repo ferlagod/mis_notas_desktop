@@ -13,6 +13,7 @@ import org.w3c.dom.Element
 import java.util.Locale
 import javax.xml.parsers.DocumentBuilderFactory
 
+/** Lectura de strings.xml: escapes de Android, formato, plurales y traducciones completas. */
 class StringsTest {
 
     private val original = Locale.getDefault()

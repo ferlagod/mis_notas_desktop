@@ -204,6 +204,7 @@ fun FolderPickerDialog(
     )
 }
 
+/** Fila seleccionable del selector de carpeta, sangrada según su [level] en el árbol. */
 @Composable
 private fun PickerRow(
     icon: ImageVector,

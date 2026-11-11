@@ -20,9 +20,12 @@ object FileDialogs {
     /** Ventana principal, para que los diálogos salgan centrados sobre ella. */
     var owner: Frame? = null
 
+    /** Extensiones que se aceptan al insertar imágenes. */
     val IMAGE_EXTENSIONS = listOf("png", "jpg", "jpeg", "webp", "gif", "bmp")
+    /** Extensiones que se aceptan al importar notas. */
     val IMPORT_EXTENSIONS = listOf("zip", "md", "markdown", "txt")
 
+    /** Pide uno o varios ficheros con alguna de [extensions]. Devuelve una lista vacía si se cancela. */
     fun openFiles(title: String, extensions: List<String>, multiple: Boolean = true): List<File> {
         if (Os.current == Os.LINUX) {
             val chooser = JFileChooser().apply {

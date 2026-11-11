@@ -283,6 +283,7 @@ fun toggleInlineStyle(
     return TextEdit(result, firstStart, maxOf(firstStart, lastEnd))
 }
 
+/** Quita los marcadores de [t] (deja solo su contenido) y recoloca la selección [s, e). */
 private fun unwrap(text: String, t: InlineToken, s: Int, e: Int): TextEdit {
     val openLen = t.contentStart - t.start
     val newText = text.substring(0, t.start) + text.substring(t.contentStart, t.contentEnd) + text.substring(t.end)
@@ -380,6 +381,10 @@ fun normalizeMarkdown(markdown: String): String {
     return text
 }
 
+/**
+ * Primer elemento en negrita, cursiva o tachado cuyo contenido acaba en espacio, fuera de los
+ * bloques de código; `null` si no hay ninguno.
+ */
 private fun findTrailingSpaceToken(text: String): InlineToken? {
     var inFence = false
     var ls = 0

@@ -68,6 +68,13 @@ import androidx.compose.ui.unit.sp
 import com.ferlagod.misnotas.ui.theme.RoyalBlueDark
 import com.ferlagod.misnotas.ui.theme.RoyalBlueLight
 
+/**
+ * Conexión con Nextcloud o desbloqueo de la bóveda.
+ *
+ * Sin cuenta ([isConfigured] = false) pide servidor, usuario, contraseña de aplicación y contraseña
+ * de cifrado, y permite seguir sin cuenta ([onSkip]). Con cuenta solo pide la contraseña de cifrado
+ * y permite desconectarla ([onResetConfig]).
+ */
 @Composable
 fun LoginScreen(
     isConfigured: Boolean,
@@ -330,6 +337,7 @@ fun LoginScreen(
     }
 }
 
+/** Campo de texto con icono; si [isPassword], oculta el texto y añade el botón de mostrarlo. */
 @Composable
 private fun StyledTextField(
     value: String,

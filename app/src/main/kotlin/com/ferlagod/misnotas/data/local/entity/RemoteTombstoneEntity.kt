@@ -14,10 +14,12 @@ import androidx.room.PrimaryKey
  */
 @Entity(tableName = "remote_tombstones")
 data class RemoteTombstoneEntity(
+    /** Nombre del fichero de la lápida en el servidor. */
     @PrimaryKey
     @ColumnInfo(name = "fileName")
     val fileName: String,
 
+    /** ETag con el que se procesó; si cambia, la lápida se vuelve a leer. */
     @ColumnInfo(name = "etag")
     val etag: String?
 )

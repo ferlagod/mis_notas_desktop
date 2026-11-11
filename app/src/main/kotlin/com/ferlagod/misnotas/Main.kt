@@ -66,6 +66,10 @@ import kotlin.system.exitProcess
 /** Tras volver a la app, no se sincroniza otra vez si la última vez fue hace menos de esto. */
 private const val FOCUS_SYNC_MIN_INTERVAL_MS = 60_000L
 
+/**
+ * Punto de entrada: prepara el sistema, impide una segunda instancia, abre la ventana
+ * (con el tamaño y la posición de la última vez) y garantiza que al cerrar se guarde todo.
+ */
 fun main() {
     // macOS: barra de menús en la parte superior y título de ventana acorde al tema del sistema.
     if (Os.current == Os.MAC) {
@@ -182,6 +186,10 @@ fun main() {
     }
 }
 
+/**
+ * Contenido de la ventana: tema, menú, atajos de teclado, bloqueo de la app y sincronización
+ * al volver a la ventana.
+ */
 @Composable
 private fun FrameWindowScope.MisNotasWindowContent(viewModel: MainViewModel, onQuit: () -> Unit) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
@@ -309,6 +317,7 @@ private fun isOnScreen(x: Int, y: Int): Boolean = try {
 private fun shortcut(key: Key) =
     if (Os.current == Os.MAC) KeyShortcut(key, meta = true) else KeyShortcut(key, ctrl = true)
 
+/** Claves de `settings.properties` con el tamaño, la posición y el estado de la ventana. */
 private const val KEY_WIN_W = "window_width"
 private const val KEY_WIN_H = "window_height"
 private const val KEY_WIN_X = "window_x"

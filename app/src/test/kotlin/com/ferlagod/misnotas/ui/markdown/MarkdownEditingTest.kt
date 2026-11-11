@@ -8,6 +8,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
+/** Edición de Markdown: continuación de listas y formato de bloque. */
 class MarkdownEditingTest {
 
     // --- Continuar listas al pulsar Intro ---

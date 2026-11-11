@@ -115,6 +115,13 @@ import com.ferlagod.misnotas.ui.theme.getAccentColor
 import com.ferlagod.misnotas.ui.theme.isAppInDarkTheme
 import com.ferlagod.misnotas.ui.viewmodel.NotesFilter
 
+/**
+ * Pantalla principal: búsqueda global, accesos rápidos (todas, fijadas, papelera) y el árbol
+ * de carpetas con su número de notas. Desde aquí se crean, editan y eliminan carpetas.
+ *
+ * @param notes notas visibles, para contar las de cada carpeta.
+ * @param onSearch busca en todas las notas con el texto escrito.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FoldersScreen(
@@ -439,6 +446,7 @@ private fun HomeHeader(
     }
 }
 
+/** Título de un grupo de filas ("Carpetas"…). */
 @Composable
 private fun GroupLabel(text: String, modifier: Modifier = Modifier) {
     Text(
@@ -449,6 +457,7 @@ private fun GroupLabel(text: String, modifier: Modifier = Modifier) {
     )
 }
 
+/** Separador entre filas, sangrado desde [start]. */
 @Composable
 private fun RowDivider(start: androidx.compose.ui.unit.Dp) {
     HorizontalDivider(
@@ -458,6 +467,7 @@ private fun RowDivider(start: androidx.compose.ui.unit.Dp) {
     )
 }
 
+/** Campo de búsqueda en todas las notas; [onSearch] se lanza al pulsar Intro. */
 @Composable
 private fun GlobalSearchField(query: String, onQueryChange: (String) -> Unit, onSearch: () -> Unit) {
     Surface(
@@ -504,6 +514,7 @@ private fun GlobalSearchField(query: String, onQueryChange: (String) -> Unit, on
     }
 }
 
+/** Fila de acceso rápido con icono, título y número de notas. */
 @Composable
 private fun QuickAccessRow(
     title: String,
@@ -546,6 +557,10 @@ private fun QuickAccessRow(
     }
 }
 
+/**
+ * Fila de una carpeta, sangrada según [indentationLevel], con un menú (botón ⋮) para
+ * añadir una subcarpeta, editarla o eliminarla.
+ */
 @Composable
 private fun FolderRow(
     name: String,
@@ -616,6 +631,7 @@ private fun FolderRow(
     }
 }
 
+/** Botón de la barra superior que muestra el estado de la sincronización y la lanza al pulsarlo. */
 @Composable
 private fun SyncStatusIconButton(
     isConfigured: Boolean,
@@ -653,6 +669,7 @@ private fun SyncStatusIconButton(
     }
 }
 
+/** Aspecto del botón de sincronización para cada estado. */
 private data class SyncIconData(
     val icon: ImageVector,
     val tint: Color,
@@ -660,6 +677,10 @@ private data class SyncIconData(
     val description: String
 )
 
+/**
+ * Diálogo para crear o editar una carpeta: nombre, color y carpeta padre. Al editar,
+ * [currentFolderId] y sus subcarpetas no se ofrecen como padre (crearían un ciclo).
+ */
 @Composable
 private fun FolderDialog(
     title: String,

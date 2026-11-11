@@ -20,19 +20,23 @@ import javax.xml.parsers.DocumentBuilderFactory
  */
 object Strings {
 
+    /** Textos de un idioma: cadenas simples y plurales (por categoría: `one`, `other`…). */
     private class Table(val strings: Map<String, String>, val plurals: Map<String, Map<String, String>>)
 
+    /** Tablas ya cargadas, por carpeta (`values`, `values-es`…). */
     private val cache = ConcurrentHashMap<String, Table>()
 
     /** Idioma activo; al cambiarlo, la interfaz se vuelve a componer. */
     var locale: Locale by mutableStateOf(Locale.getDefault())
         private set
 
+    /** Cambia el idioma de la app (también el `Locale` por defecto, que usan fechas y números). */
     fun applyLocale(value: Locale) {
         Locale.setDefault(value)
         locale = value
     }
 
+    /** Tabla de una carpeta; la carga la primera vez. */
     private fun table(folder: String): Table = cache.getOrPut(folder) { load(folder) }
 
     /** Tablas en orden de búsqueda: idioma concreto y luego inglés. */
@@ -42,12 +46,17 @@ object Strings {
         else listOf(table("values-$lang"), table("values"))
     }
 
+    /**
+     * Texto de [key] en el idioma activo (o en inglés si falta), con [args] sustituidos.
+     * Si la clave no existe devuelve la propia clave.
+     */
     fun get(key: String, vararg args: Any?): String {
         val loc = locale
         val raw = tables(loc).firstNotNullOfOrNull { it.strings[key] } ?: return key
         return format(raw, loc, args)
     }
 
+    /** Texto plural de [key] para [count]. Si no se pasan [args], se usa [count] como argumento. */
     fun quantity(key: String, count: Int, vararg args: Any?): String {
         val loc = locale
         val category = pluralCategory(loc, count)
@@ -57,6 +66,9 @@ object Strings {
         return format(raw, loc, if (args.isEmpty()) arrayOf(count) else args)
     }
 
+    /**
+     * Sustituye los marcadores; si el texto traducido tiene marcadores incorrectos, lo devuelve sin formatear.
+     */
     private fun format(raw: String, locale: Locale, args: Array<out Any?>): String =
         if (args.isEmpty()) raw else try {
             String.format(locale, raw, *args)
@@ -70,6 +82,7 @@ object Strings {
         else -> if (n == 1) "one" else "other"
     }
 
+    /** Lee el `strings.xml` de [folder]; tabla vacía si no existe. */
     private fun load(folder: String): Table {
         val stream = Strings::class.java.getResourceAsStream("/i18n/$folder/strings.xml")
             ?: return Table(emptyMap(), emptyMap())

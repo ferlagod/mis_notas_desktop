@@ -13,10 +13,14 @@ import javax.crypto.SecretKey
  * en cualquier dispositivo y un verificador cifrado para comprobar la contraseña maestra.
  */
 data class KeyInfo(
+    /** Salt de PBKDF2. */
     val salt: ByteArray,
+    /** Iteraciones de PBKDF2. */
     val iterations: Int,
+    /** [CHECK_PLAINTEXT] cifrado con la clave; si se descifra, la contraseña es correcta. */
     val check: String
 ) {
+    /** Serializa a JSON legible (con sangría) para subirlo al servidor. */
     fun toJson(): String = JSONObject().apply {
         put("format", "misnotas-keyinfo")
         put("version", 1)
@@ -26,6 +30,7 @@ data class KeyInfo(
         put("check", check)
     }.toString(2)
 
+    /** `true` si [key] descifra el verificador, es decir, si la contraseña maestra es correcta. */
     fun verify(key: SecretKey): Boolean = CryptoManager.verify(check, CHECK_PLAINTEXT, key, CHECK_AAD)
 
     override fun equals(other: Any?): Boolean =
@@ -34,13 +39,21 @@ data class KeyInfo(
     override fun hashCode(): Int = 31 * (31 * salt.contentHashCode() + iterations) + check.hashCode()
 
     companion object {
+        /** Nombre del fichero en el servidor. */
         const val FILE_NAME = "keyinfo.json"
+        /** Texto conocido que se cifra como verificador. */
         const val CHECK_PLAINTEXT = "misnotas-key-check-v1"
+        /** Datos asociados (AAD) del verificador. */
         const val CHECK_AAD = "keyinfo"
 
+        /** Crea los parámetros de una bóveda nueva con su verificador cifrado con [key]. */
         fun create(salt: ByteArray, iterations: Int, key: SecretKey) =
             KeyInfo(salt, iterations, CryptoManager.encrypt(CHECK_PLAINTEXT, key, CHECK_AAD))
 
+        /**
+         * Lee y valida `keyinfo.json`. Lanza [IllegalArgumentException] si el formato, el algoritmo,
+         * el salt o las iteraciones no son válidos.
+         */
         fun parse(raw: String): KeyInfo {
             val json = JSONObject(raw)
             require(json.optString("format") == "misnotas-keyinfo") { "keyinfo.json no válido" }
@@ -62,6 +75,7 @@ data class KeyInfo(
 
 /** La contraseña maestra no coincide con la de la bóveda. */
 class WrongMasterPasswordException(val reason: Reason = Reason.WRONG) : Exception("Wrong master password: $reason") {
+    /** Por qué no se acepta la contraseña. */
     enum class Reason {
         /** La contraseña no verifica contra keyinfo.json. */
         WRONG,
@@ -74,6 +88,7 @@ class WrongMasterPasswordException(val reason: Reason = Reason.WRONG) : Exceptio
 
 /** Estado de la bóveda que impide continuar. */
 class VaultException(val reason: Reason) : Exception("Vault error: $reason") {
+    /** Qué impide continuar. */
     enum class Reason {
         /** Hay ficheros v1.0 en el servidor y este dispositivo no tiene el salt original. */
         LEGACY_NO_SALT,

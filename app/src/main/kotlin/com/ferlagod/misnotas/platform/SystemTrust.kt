@@ -23,22 +23,27 @@ import javax.net.ssl.X509TrustManager
  */
 object SystemTrust {
 
+    /** Validador de certificados que combina el almacén de Java y el del sistema. */
     val trustManager: X509TrustManager by lazy {
         val managers = listOfNotNull(defaultManager(), systemManager())
         if (managers.size == 1) managers.first() else CompositeTrustManager(managers)
     }
 
+    /** Fábrica de conexiones TLS que usa [trustManager]. */
     val socketFactory: SSLSocketFactory by lazy {
         SSLContext.getInstance("TLS").apply { init(null, arrayOf(trustManager), null) }.socketFactory
     }
 
+    /** Validador X.509 para [keyStore] (`null` = almacén por defecto de Java). */
     private fun managerFor(keyStore: KeyStore?): X509TrustManager? =
         TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
             .apply { init(keyStore) }
             .trustManagers.filterIsInstance<X509TrustManager>().firstOrNull()
 
+    /** Validador con los certificados que trae Java. */
     private fun defaultManager(): X509TrustManager? = managerFor(null)
 
+    /** Validador con los certificados del sistema operativo, o `null` si no se pueden leer. */
     private fun systemManager(): X509TrustManager? = try {
         val store = when (Os.current) {
             Os.WINDOWS -> KeyStore.getInstance("Windows-ROOT").apply { load(null, null) }

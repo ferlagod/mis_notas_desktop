@@ -10,6 +10,7 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/** Derivación de clave, cifrado AES-GCM con AAD, detección de manipulaciones y variantes de contraseña. */
 class CryptoManagerTest {
 
     @Test

@@ -18,6 +18,10 @@ object SingleInstance {
     private var channel: FileChannel? = null
     private var lock: FileLock? = null
 
+    /**
+     * Intenta tomar el bloqueo en [dir]. Devuelve `false` si otra instancia ya lo tiene; el bloqueo
+     * se mantiene mientras la app esté abierta.
+     */
     @Synchronized
     fun acquire(dir: File = AppDirs.dataDir): Boolean {
         if (lock != null) return true

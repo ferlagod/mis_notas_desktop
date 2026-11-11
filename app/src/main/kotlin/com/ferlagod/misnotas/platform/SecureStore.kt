@@ -33,28 +33,35 @@ class SecureStore(private val dir: File) {
 
     private val dataFile = File(dir, DATA_FILE)
     private val keyFile = File(dir, KEY_FILE)
+    /** Valores descifrados en memoria. */
     private val values = LinkedHashMap<String, String>()
+    /** Clave que cifra `secure.dat`. */
     private val key: SecretKey = loadOrCreateKey()
 
     init {
         load()
     }
 
+    /** Valor de texto, o `null` si no existe. */
     @Synchronized
     fun getString(name: String): String? = values[name]
 
+    /** Valor entero, o [default] si no existe o no es un número. */
     @Synchronized
     fun getInt(name: String, default: Int): Int = values[name]?.toIntOrNull() ?: default
 
+    /** Valor entero largo, o [default] si no existe o no es un número. */
     @Synchronized
     fun getLong(name: String, default: Long): Long = values[name]?.toLongOrNull() ?: default
 
+    /** Modifica los valores (como un mapa) y guarda el fichero cifrado. */
     @Synchronized
     fun edit(block: MutableMap<String, String>.() -> Unit) {
         values.block()
         save()
     }
 
+    /** Borra todos los valores. */
     @Synchronized
     fun clear() {
         values.clear()
@@ -63,6 +70,7 @@ class SecureStore(private val dir: File) {
 
     // ------------------------------------------------------------------
 
+    /** Lee y descifra `secure.dat`. Si no se puede descifrar, lo borra y empieza vacío. */
     private fun load() {
         if (!dataFile.isFile) return
         try {
@@ -76,6 +84,7 @@ class SecureStore(private val dir: File) {
         }
     }
 
+    /** Cifra los valores y los escribe de forma atómica, con permisos solo para el usuario. */
     private fun save() {
         try {
             dir.mkdirs()
@@ -135,12 +144,14 @@ class SecureStore(private val dir: File) {
         return SecretKeySpec(raw, "AES")
     }
 
+    /** Clave AES de 32 bytes en Base64, o `null` si no es válida. */
     private fun decodeKey(encoded: String?): SecretKey? = try {
         encoded?.let { Base64.getDecoder().decode(it) }?.takeIf { it.size == 32 }?.let { SecretKeySpec(it, "AES") }
     } catch (_: IllegalArgumentException) {
         null
     }
 
+    /** Deja el fichero legible y modificable solo por el usuario actual. */
     private fun restrictToOwner(file: File) {
         try {
             Files.setPosixFilePermissions(file.toPath(), PosixFilePermissions.fromString("rw-------"))
@@ -156,7 +167,9 @@ class SecureStore(private val dir: File) {
         const val TAG = "SecureStore"
         const val DATA_FILE = "secure.dat"
         const val KEY_FILE = "secure.key"
+        /** AAD del cifrado de `secure.dat`. */
         const val AAD = "misnotas-secure-store-v1"
+        /** Servicio y cuenta con los que se guarda la clave en el llavero. */
         const val KEYRING_SERVICE = "Mis Notas"
         const val KEYRING_ACCOUNT = "local-storage-key"
     }

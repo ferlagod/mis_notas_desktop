@@ -13,6 +13,7 @@ import javax.crypto.SecretKey
 
 /** Registro remoto descodificado: o bien la entidad viva, o bien una lápida de borrado. */
 sealed interface RemoteRecord<out T> {
+    /** La entidad tal como está en el servidor. */
     data class Live<T>(val entity: T) : RemoteRecord<T>
     /**
      * Lápida de borrado. [verified] es true si lleva una prueba cifrada con la clave de la bóveda
@@ -37,17 +38,23 @@ sealed interface RemoteRecord<out T> {
  */
 object RemoteCodec {
 
+    /** Valor del campo `format` de todos los ficheros. */
     const val FORMAT = "misnotas"
+    /** Versión del formato que escribe esta app; los ficheros de versiones mayores se rechazan. */
     const val VERSION = 2
+    /** Tipo de los ficheros de nota. */
     const val TYPE_NOTE = "note"
+    /** Tipo de los ficheros de carpeta. */
     const val TYPE_FOLDER = "folder"
 
+    /** Datos asociados (AAD) del cifrado: ligan el contenido a su tipo e id. */
     fun aad(type: String, id: String) = "$type:$id"
 
     // ------------------------------------------------------------------
     // Notas
     // ------------------------------------------------------------------
 
+    /** Cifra una nota en el formato v2. La papelera viaja como `isTrashed` dentro del payload. */
     fun encodeNote(note: NoteEntity, key: SecretKey): String {
         val payload = JSONObject().apply {
             put("folderId", note.folderId ?: JSONObject.NULL)
@@ -63,6 +70,10 @@ object RemoteCodec {
             .toString()
     }
 
+    /**
+     * Descifra un fichero de nota (v2 o v1). Lanza una excepción si el sobre no es válido, el id no
+     * coincide con [expectedId] o el cifrado no se verifica con [key].
+     */
     fun decodeNote(raw: String, expectedId: String, key: SecretKey): RemoteRecord<NoteEntity> {
         val json = JSONObject(raw)
         if (!json.has("format")) return RemoteRecord.Live(decodeLegacyNote(json, key))
@@ -86,6 +97,7 @@ object RemoteCodec {
         )
     }
 
+    /** Lee una nota del formato v1, con título y contenido cifrados por separado. */
     private fun decodeLegacyNote(json: JSONObject, key: SecretKey): NoteEntity = NoteEntity(
         id = json.getString("id"),
         folderId = json.optStringOrNull("folderId"),
@@ -102,6 +114,7 @@ object RemoteCodec {
     // Carpetas
     // ------------------------------------------------------------------
 
+    /** Cifra una carpeta en el formato v2. */
     fun encodeFolder(folder: FolderEntity, key: SecretKey): String {
         val payload = JSONObject().apply {
             put("parentId", folder.parentId ?: JSONObject.NULL)
@@ -114,6 +127,7 @@ object RemoteCodec {
             .toString()
     }
 
+    /** Descifra un fichero de carpeta (v2 o v1). Mismos errores que [decodeNote]. */
     fun decodeFolder(raw: String, expectedId: String, key: SecretKey): RemoteRecord<FolderEntity> {
         val json = JSONObject(raw)
         if (!json.has("format")) return RemoteRecord.Live(decodeLegacyFolder(json, key))
@@ -135,6 +149,7 @@ object RemoteCodec {
         )
     }
 
+    /** Lee una carpeta del formato v1, con el nombre cifrado. */
     private fun decodeLegacyFolder(json: JSONObject, key: SecretKey): FolderEntity = FolderEntity(
         id = json.getString("id"),
         parentId = json.optStringOrNull("parentId"),
@@ -167,17 +182,22 @@ object RemoteCodec {
         false
     }
 
+    /** AAD de la prueba de una lápida. */
     private fun tombstoneAad(type: String, id: String) = "tombstone:$type:$id"
+    /** Texto que se cifra como prueba de una lápida. */
     private fun tombstoneProof(deletedAt: Long) = "deleted:$deletedAt"
 
+    /** Cifra el contenido de un adjunto con AAD = `attachment:<id>`. */
     fun encryptAttachment(bytes: ByteArray, id: String, key: SecretKey): ByteArray =
         CryptoManager.encryptBytes(bytes, key, aad("attachment", id))
 
+    /** Descifra un adjunto cifrado con [encryptAttachment]. */
     fun decryptAttachment(bytes: ByteArray, id: String, key: SecretKey): ByteArray =
         CryptoManager.decryptBytes(bytes, key, aad("attachment", id))
 
     // ------------------------------------------------------------------
 
+    /** Campos comunes a todos los ficheros: formato, versión, tipo e id. */
     private fun envelope(type: String, id: String) = JSONObject().apply {
         put("format", FORMAT)
         put("version", VERSION)
@@ -185,6 +205,10 @@ object RemoteCodec {
         put("id", id)
     }
 
+    /**
+     * Valida el sobre de un fichero y devuelve su id. Lanza [IllegalArgumentException] si el formato
+     * o el tipo no son los esperados, si es de una versión más nueva o si el id no coincide con el nombre.
+     */
     private fun checkEnvelope(json: JSONObject, type: String, expectedId: String): String {
         require(json.optString("format") == FORMAT) { "Formato desconocido" }
         require(json.optInt("version", 0) <= VERSION) {
@@ -210,6 +234,7 @@ object RemoteCodec {
         return RemoteRecord.Tombstone(id, deletedAt, verified = true)
     }
 
+    /** Valor de texto del campo, o `null` si falta, es `null` o está vacío. */
     private fun JSONObject.optStringOrNull(name: String): String? =
         if (!has(name) || isNull(name)) null else getString(name).takeIf { it.isNotBlank() }
 }

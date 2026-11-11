@@ -13,9 +13,11 @@ import java.util.Locale
  */
 object TextSearch {
 
+    /** Marcas diacríticas (tildes, diéresis…) separadas tras normalizar en NFD. */
     private val DIACRITICS = Regex("\\p{Mn}+")
     private val WHITESPACE = Regex("\\s+")
 
+    /** Texto en minúsculas y sin acentos, para comparar. */
     fun normalize(text: String): String =
         DIACRITICS.replace(Normalizer.normalize(text, Normalizer.Form.NFD), "").lowercase(Locale.ROOT)
 

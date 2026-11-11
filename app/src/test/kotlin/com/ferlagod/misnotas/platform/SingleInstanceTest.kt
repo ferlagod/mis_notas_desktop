@@ -16,6 +16,7 @@ object SingleInstanceProbe {
     fun main(args: Array<String>) = println(SingleInstance.acquire(File(args[0])))
 }
 
+/** Bloqueo de instancia única, comprobado desde un segundo proceso. */
 class SingleInstanceTest {
 
     private fun otherProcessAcquires(dir: File): Boolean {

@@ -10,6 +10,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/** Ficheros Markdown de la copia de seguridad: cabecera, nombres de fichero y rutas del ZIP. */
 class MarkdownFileTest {
 
     @Test

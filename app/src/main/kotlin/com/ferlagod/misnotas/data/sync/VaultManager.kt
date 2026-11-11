@@ -210,9 +210,11 @@ class VaultManager(private val prefs: AuthPreferences) {
         return null
     }
 
+    /** Deriva la clave fuera del hilo principal (PBKDF2 es costoso a propósito). */
     private suspend fun derive(password: String, salt: ByteArray, iterations: Int): SecretKey =
         withContext(Dispatchers.Default) { CryptoManager.deriveKey(password, salt, iterations) }
 
+    /** Id de una nota o carpeta a partir del nombre de su fichero remoto. */
     private fun idOf(fileName: String, prefix: String) =
         fileName.removePrefix(prefix).removeSuffix(SyncRepository.JSON_EXT)
 }

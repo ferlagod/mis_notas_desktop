@@ -41,21 +41,27 @@ import java.io.File
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
+    /** Acceso a las carpetas. */
     abstract fun folderDao(): FolderDao
+    /** Acceso a las notas. */
     abstract fun noteDao(): NoteDao
+    /** Acceso al registro de adjuntos. */
     abstract fun attachmentDao(): AttachmentDao
+    /** Acceso a las lápidas remotas ya procesadas. */
     abstract fun remoteTombstoneDao(): RemoteTombstoneDao
 
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        /** Base de datos de la app, en la carpeta de datos del usuario (se crea la primera vez). */
         fun getInstance(): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: build(AppDirs.databaseFile).also { INSTANCE = it }
             }
         }
 
+        /** Abre (o crea) una base de datos en [file]; los tests la usan con un fichero temporal. */
         fun build(file: File): AppDatabase {
             file.parentFile?.mkdirs()
             return Room.databaseBuilder<AppDatabase>(name = file.absolutePath)

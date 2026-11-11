@@ -11,6 +11,7 @@ import org.junit.Test
 import java.io.File
 import java.nio.file.Files
 
+/** Persistencia de preferencias y certificados de confianza del sistema. */
 class StoresTest {
 
     @Test

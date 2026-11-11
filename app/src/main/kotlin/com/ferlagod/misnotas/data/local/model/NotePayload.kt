@@ -11,10 +11,13 @@ import org.json.JSONObject
  * y separar las cadenas Base64 pesadas en un diccionario interno indexado.
  */
 data class NotePayload(
+    /** Texto Markdown de la nota. */
     val text: String,
+    /** Formato antiguo: imágenes en Base64 indexadas por clave. Vacío en las notas actuales. */
     val images: Map<String, String> = emptyMap()
 )
 
+/** Conversión entre el contenido guardado de una nota y [NotePayload]. */
 object NoteContentParser {
 
     /**

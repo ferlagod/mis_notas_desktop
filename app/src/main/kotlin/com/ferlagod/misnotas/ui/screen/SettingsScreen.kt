@@ -125,6 +125,12 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Ajustes: aspecto, privacidad (bloqueo de la app), notas y papelera, copia de seguridad,
+ * sincronización con Nextcloud, idioma e información de la app.
+ *
+ * @param busy hay una importación o exportación en curso (los botones se desactivan).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -353,9 +359,11 @@ fun SettingsScreen(
     }
 }
 
+/** Nombre propuesto para la copia de seguridad: `MisNotas-AAAA-MM-DD.zip`. */
 private fun backupFileName(): String =
     "MisNotas-" + SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(Date()) + ".zip"
 
+/** Título de una sección de ajustes. */
 @Composable
 private fun SectionTitle(text: String) {
     Text(
@@ -366,6 +374,7 @@ private fun SectionTitle(text: String) {
     )
 }
 
+/** Tarjeta que agrupa filas de ajustes. */
 @Composable
 private fun SettingsCard(content: @Composable () -> Unit) {
     Surface(
@@ -377,6 +386,7 @@ private fun SettingsCard(content: @Composable () -> Unit) {
     }
 }
 
+/** Separador entre filas de una tarjeta. */
 @Composable
 private fun Divider() {
     HorizontalDivider(
@@ -386,6 +396,7 @@ private fun Divider() {
     )
 }
 
+/** Icono y texto de una fila. */
 @Composable
 private fun RowLabel(icon: ImageVector, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -395,6 +406,7 @@ private fun RowLabel(icon: ImageVector, text: String) {
     }
 }
 
+/** Icono de una fila de ajustes, dentro de su fondo redondeado. */
 @Composable
 private fun SettingIcon(icon: ImageVector) {
     Box(
@@ -408,6 +420,7 @@ private fun SettingIcon(icon: ImageVector) {
     }
 }
 
+/** Fila con un interruptor; toda la fila es pulsable. */
 @Composable
 private fun SwitchRow(
     icon: ImageVector,
@@ -441,6 +454,7 @@ private fun SwitchRow(
     }
 }
 
+/** Fila con un menú para elegir el orden de las notas. */
 @Composable
 private fun SortRow(current: SortOrder, onSelect: (SortOrder) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
@@ -478,6 +492,10 @@ private fun SortRow(current: SortOrder, onSelect: (SortOrder) -> Unit) {
 // Nextcloud
 // ----------------------------------------------------------------------
 
+/**
+ * Sección de la cuenta: sin cuenta, formulario para conectarla; con cuenta, servidor, usuario,
+ * estado y fecha de la última sincronización, y botones para sincronizar o desconectar.
+ */
 @Composable
 private fun NextcloudSection(
     isConfigured: Boolean,
@@ -753,6 +771,7 @@ private fun NextcloudSection(
     }
 }
 
+/** Fecha y hora de una sincronización. */
 private fun formatSyncTime(timestamp: Long): String = DateFormats.dateTime(timestamp)
 
 /** Pide la contraseña nueva (dos veces) al activar el bloqueo de la app. */
@@ -818,12 +837,14 @@ private fun SetAppPasswordDialog(onDismiss: () -> Unit, onConfirm: (String) -> U
     )
 }
 
+/** Longitud mínima de la contraseña de bloqueo. */
 private const val MIN_APP_PASSWORD = 4
 
 // ----------------------------------------------------------------------
 // Idioma y Acerca de
 // ----------------------------------------------------------------------
 
+/** Selector del idioma de la app. */
 @Composable
 private fun LanguageSection(current: AppLanguage, onSelected: (AppLanguage) -> Unit) {
     Column(modifier = Modifier.selectableGroup()) {
@@ -855,6 +876,7 @@ private fun LanguageSection(current: AppLanguage, onSelected: (AppLanguage) -> U
     }
 }
 
+/** Información de la app: versión, licencia y enlace al código fuente. */
 @Composable
 private fun AboutSection() {
     val uriHandler = LocalUriHandler.current
@@ -889,8 +911,12 @@ private fun AboutSection() {
     }
 }
 
+/** Repositorio con el código fuente. */
 private const val REPO_URL = "https://github.com/ferlagod/mis_notas_desktop"
 
+/**
+ * Campo de texto de los ajustes con icono; si [isPassword], oculta el texto y añade el botón de mostrarlo.
+ */
 @Composable
 private fun SettingsTextField(
     value: String,

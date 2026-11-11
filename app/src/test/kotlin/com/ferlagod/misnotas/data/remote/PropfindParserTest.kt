@@ -8,6 +8,7 @@ import com.ferlagod.misnotas.data.remote.webdav.WebDavClient
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
+/** Lectura de respuestas PROPFIND, incluido el rechazo de DTD (XXE). */
 class PropfindParserTest {
 
     private val xml = """

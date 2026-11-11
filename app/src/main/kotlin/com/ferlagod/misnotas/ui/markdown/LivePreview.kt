@@ -109,6 +109,7 @@ class MarkdownDocumentCache(private val imageLabel: String, private val colors: 
     private var last: RenderedMarkdown? = null
     private var previous: RenderedMarkdown? = null
 
+    /** Documento pintado para [source]; reutiliza los dos últimos para no repetir el análisis. */
     fun get(source: String): RenderedMarkdown {
         last?.let { if (it.source == source) return it }
         previous?.let {

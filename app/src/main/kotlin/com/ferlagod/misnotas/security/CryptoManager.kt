@@ -24,8 +24,11 @@ import javax.crypto.spec.SecretKeySpec
  */
 object CryptoManager {
 
+    /** Algoritmo de las claves. */
     private const val ALGORITHM_AES = "AES"
+    /** Modo de cifrado: AES-GCM sin relleno. */
     private const val TRANSFORMATION_AES_GCM = "AES/GCM/NoPadding"
+    /** Algoritmo de derivación de clave; se guarda en `keyinfo.json`. */
     const val KDF_ALGORITHM = "PBKDF2WithHmacSHA256"
 
     /** Iteraciones usadas por la versión 1.0 de la app (se mantienen para cuentas antiguas). */
@@ -34,14 +37,20 @@ object CryptoManager {
     /** Iteraciones para cuentas nuevas (recomendación OWASP para PBKDF2-HMAC-SHA256: >= 600.000). */
     const val DEFAULT_PBKDF2_ITERATIONS = 600_000
 
+    /** Longitud de la clave AES. */
     const val KEY_LENGTH_BITS = 256
+    /** Longitud del IV, nuevo y aleatorio en cada cifrado. */
     const val GCM_IV_LENGTH_BYTES = 12
+    /** Longitud de la etiqueta de autenticación GCM. */
     const val GCM_TAG_LENGTH_BITS = 128
+    /** Longitud del salt de las bóvedas nuevas. */
     const val DEFAULT_SALT_LENGTH_BYTES = 16
 
     /** Límites aceptados al leer parámetros del servidor (evita bloqueos con valores absurdos). */
     const val MIN_PBKDF2_ITERATIONS = 10_000
+    /** Máximo de iteraciones aceptado. */
     const val MAX_PBKDF2_ITERATIONS = 10_000_000
+    /** Longitud mínima de salt aceptada. */
     const val MIN_SALT_LENGTH_BYTES = 8
 
     private val secureRandom = SecureRandom()
@@ -67,6 +76,7 @@ object CryptoManager {
     fun canonicalPassword(password: String): String =
         java.text.Normalizer.normalize(password, java.text.Normalizer.Form.NFC)
 
+    /** Salt aleatorio criptográficamente seguro. */
     fun generateSalt(sizeBytes: Int = DEFAULT_SALT_LENGTH_BYTES): ByteArray {
         val salt = ByteArray(sizeBytes)
         secureRandom.nextBytes(salt)
@@ -95,6 +105,7 @@ object CryptoManager {
         }
     }
 
+    /** Como la variante con [CharArray], para contraseñas en [String]. */
     fun deriveKey(
         masterPassword: String,
         salt: ByteArray,
@@ -138,11 +149,13 @@ object CryptoManager {
     // Texto (Base64)
     // ------------------------------------------------------------------
 
+    /** Cifra texto UTF-8 y devuelve `IV | CipherText + Tag` en Base64. */
     fun encrypt(plainText: String, secretKey: SecretKey, aad: String? = null): String {
         val combined = encryptBytes(plainText.toByteArray(Charsets.UTF_8), secretKey, aad)
         return Base64.getEncoder().encodeToString(combined)
     }
 
+    /** Descifra el resultado de [encrypt]. Lanza excepción si la clave o el AAD no coinciden. */
     fun decrypt(cipherText: String, secretKey: SecretKey, aad: String? = null): String {
         require(cipherText.isNotBlank()) { "El texto cifrado no puede estar vacío" }
         val combined = Base64.getDecoder().decode(cipherText)
@@ -162,12 +175,16 @@ object CryptoManager {
     // Utilidades de serialización
     // ------------------------------------------------------------------
 
+    /** Codifica un salt en Base64. */
     fun saltToBase64(salt: ByteArray): String = Base64.getEncoder().encodeToString(salt)
 
+    /** Decodifica un salt en Base64. */
     fun saltFromBase64(saltBase64: String): ByteArray = Base64.getDecoder().decode(saltBase64)
 
+    /** Codifica la clave en Base64 para guardarla en el almacén seguro. */
     fun keyToBase64(key: SecretKey): String = Base64.getEncoder().encodeToString(key.encoded)
 
+    /** Reconstruye una clave AES a partir de su Base64. */
     fun keyFromBase64(keyBase64: String): SecretKey =
         SecretKeySpec(Base64.getDecoder().decode(keyBase64), ALGORITHM_AES)
 }

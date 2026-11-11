@@ -71,6 +71,7 @@ fun AppLockScreen(onUnlock: (password: String) -> Boolean) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
 
+    /** Comprueba la contraseña; si no es correcta, muestra el error y vacía el campo. */
     fun submit() {
         if (password.isEmpty()) return
         if (onUnlock(password)) {

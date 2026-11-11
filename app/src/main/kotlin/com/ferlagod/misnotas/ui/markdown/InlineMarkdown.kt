@@ -13,6 +13,7 @@ package com.ferlagod.misnotas.ui.markdown
  * y qué estilo lleva cada tramo ([StyleRange]). Son funciones puras para poder probarlas.
  */
 
+/** Tipos de elemento en línea: negrita, cursiva, tachado, código, enlace, imagen y URL suelta. */
 enum class InlineKind { BOLD, ITALIC, STRIKE, CODE, LINK, IMAGE, AUTOLINK }
 
 /**
@@ -28,6 +29,7 @@ data class InlineToken(
     val url: String? = null
 )
 
+/** Analizador de los elementos en línea de Markdown. */
 object InlineMarkdown {
 
     /** Elementos en línea de text[from, to), incluidos los anidados (negrita dentro de enlace…). */
@@ -37,6 +39,10 @@ object InlineMarkdown {
         return out
     }
 
+    /**
+     * Recorre text[from, to) y añade a [out] los elementos que encuentra; entra en los que admiten
+     * anidación (negrita, cursiva, tachado y enlaces). Una `\` escapa el carácter siguiente.
+     */
     private fun parseRange(text: String, from: Int, to: Int, out: MutableList<InlineToken>) {
         var i = from
         while (i < to) {
@@ -120,12 +126,17 @@ object InlineMarkdown {
         return null
     }
 
+    /** Código en línea `` `x` `` que empieza en [i]; `null` si no se cierra antes de [to] o está vacío. */
     private fun code(text: String, i: Int, to: Int): InlineToken? {
         val close = text.indexOf('`', i + 1)
         if (close == -1 || close >= to || close == i + 1) return null
         return InlineToken(InlineKind.CODE, i, close + 1, i + 1, close)
     }
 
+    /**
+     * Enlace `[texto](url)` o imagen `![texto](url)` que empieza en [i]. La URL no puede llevar
+     * espacios y el texto de un enlace no puede estar vacío ni ocupar varias líneas.
+     */
     private fun link(text: String, i: Int, to: Int, image: Boolean): InlineToken? {
         val open = if (image) i + 1 else i
         val close = text.indexOf(']', open + 1)
@@ -142,6 +153,7 @@ object InlineMarkdown {
         )
     }
 
+    /** URL suelta `http(s)://…` que empieza en [i]. No incluye la puntuación final (".", ","…). */
     private fun autolink(text: String, i: Int, from: Int, to: Int): InlineToken? {
         if (!text.startsWith("http://", i) && !text.startsWith("https://", i)) return null
         if (i > from && text[i - 1].isLetterOrDigit()) return null
@@ -157,6 +169,7 @@ object InlineMarkdown {
 // Presentación
 // ----------------------------------------------------------------------
 
+/** Tipo de tramo sustituido, que decide cómo se comporta al borrar. */
 enum class ReplacementKind {
     /** Marcador de bloque al principio de línea (`# `, `- `, `- [ ] `…). Borrarlo quita el formato de la línea. */
     BLOCK,
@@ -169,6 +182,7 @@ enum class ReplacementKind {
 /** El tramo original [start, end) se muestra como [display] ("" = oculto). */
 data class Replacement(val start: Int, val end: Int, val display: String, val kind: ReplacementKind)
 
+/** Estilos visuales que el editor aplica a los tramos del texto. */
 enum class MdStyle { BOLD, ITALIC, STRIKE, CODE, LINK, HEADING, MARKER, TASK_DONE, QUOTE, CODE_BLOCK, FENCE, RULE, IMAGE }
 
 /** Estilo sobre el tramo original [start, end). [level] es el nivel de título; [url] el de un enlace. */
@@ -177,6 +191,10 @@ data class StyleRange(val start: Int, val end: Int, val style: MdStyle, val leve
 /** Una casilla de tarea en la línea que empieza en [lineStart]. */
 data class TaskBox(val lineStart: Int, val markerStart: Int, val markerEnd: Int, val checked: Boolean)
 
+/**
+ * Resultado de analizar un texto: qué se oculta o sustituye, qué estilo lleva cada tramo,
+ * los elementos en línea y las casillas de tarea.
+ */
 class MarkdownPresentation(
     val replacements: List<Replacement>,
     val styles: List<StyleRange>,
@@ -188,12 +206,18 @@ class MarkdownPresentation(
         replacements.firstOrNull { index >= it.start && index < it.end }
 }
 
+/** Viñeta, casilla o número al principio de línea (con su sangría). */
 private val BLOCK_PREFIX = Regex("""^(\s*)([-*+] \[[ xX]] |[-*+] |\d{1,9}[.)] )""")
+/** Título `# ` … `###### `. */
 private val HEADING_PREFIX = Regex("""^(#{1,6}) """)
+/** Cita `> `. */
 private val QUOTE_PREFIX = Regex("""^> ?""")
+/** Línea que solo contiene una imagen. */
 private val WHOLE_LINE_IMAGE = Regex("""^\s*!\[(.*?)]\((.*?)\)\s*$""")
+/** Separador horizontal (`---`, `***`, `___`). */
 private val RULE_LINE = Regex("""^\s*([-*_])(\s*\1){2,}\s*$""")
 
+/** Calcula cómo se muestra un texto Markdown (ver [MarkdownPresentation]). */
 object MarkdownPresenter {
 
     /** Solo formato en línea (lo usa el lector para cada párrafo, celda, elemento de lista…). */
@@ -236,6 +260,10 @@ object MarkdownPresenter {
         return MarkdownPresentation(reps.sortedBy { it.start }, styles, tokens, tasks)
     }
 
+    /**
+     * Analiza una línea [ls, le): marcador de bloque (título, cita, lista, tarea), imagen o separador
+     * de línea completa, y después el formato en línea del resto.
+     */
     private fun presentLine(
         text: String,
         ls: Int,
@@ -280,6 +308,10 @@ object MarkdownPresenter {
         tokens += presentInline(text, contentStart, le, imageLabel, reps, styles)
     }
 
+    /**
+     * Oculta los marcadores en línea de text[from, to) y añade sus estilos. Las imágenes se sustituyen
+     * por una etiqueta ([imageLabel] y su tamaño). Devuelve los elementos encontrados.
+     */
     private fun presentInline(
         text: String,
         from: Int,
@@ -339,10 +371,15 @@ class DisplayMapping(
     val originalToDisplay: IntArray,
     val displayToOriginal: IntArray
 ) {
+    /** Posición en el texto mostrado que corresponde a [offset] del original. */
     fun toDisplay(offset: Int): Int = originalToDisplay[offset.coerceIn(0, originalToDisplay.size - 1)]
+    /** Posición en el texto original que corresponde a [offset] del mostrado. */
     fun toOriginal(offset: Int): Int = displayToOriginal[offset.coerceIn(0, displayToOriginal.size - 1)]
 
     companion object {
+        /**
+         * Construye el texto mostrado aplicando [replacements] a [source], con la correspondencia de posiciones.
+         */
         fun build(source: String, replacements: List<Replacement>): DisplayMapping {
             val len = source.length
             val sb = StringBuilder(len)
