@@ -1,0 +1,171 @@
+<!doctype html>
+<!--
+  SPDX-License-Identifier: GPL-3.0-or-later
+  Copyright (C) 2026 ferlagod
+  Mis Notas — https://github.com/ferlagod/mis_notas_desktop
+-->
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Política de privacidad · Mis Notas para escritorio</title>
+  <meta name="description" content="Política de privacidad de Mis Notas, app de notas libre para Windows, macOS y Linux.">
+  <style>
+    :root {
+      --bg: #F2F2F7;
+      --card: #FFFFFF;
+      --text: #1C1C1E;
+      --muted: #6C6C70;
+      --brand: #557331;
+      --line: #E5E5EA;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121214;
+        --card: #1C1C1E;
+        --text: #F2F2F7;
+        --muted: #98989D;
+        --brand: #A8C47E;
+        --line: #2C2C2E;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.6 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+    .eyebrow {
+      color: var(--brand);
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      margin: 0;
+    }
+    h1 {
+      font-family: Outfit, Inter, system-ui, sans-serif;
+      font-size: clamp(30px, 6vw, 40px);
+      line-height: 1.15;
+      margin: 4px 0 6px;
+    }
+    .meta { color: var(--muted); margin: 0 0 24px; }
+    .summary {
+      background: var(--card);
+      border-left: 4px solid var(--brand);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-bottom: 28px;
+    }
+    .summary p { margin: 0; }
+    section {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 8px 20px 12px;
+      margin-bottom: 14px;
+    }
+    h2 {
+      font-family: Outfit, Inter, system-ui, sans-serif;
+      font-size: 20px;
+      margin: 14px 0 6px;
+    }
+    ul { padding-left: 20px; margin: 8px 0; }
+    li { margin: 4px 0; }
+    a { color: var(--brand); }
+    code { font-size: 14px; background: var(--line); border-radius: 6px; padding: 1px 6px; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 15px; }
+    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; }
+    footer { color: var(--muted); font-size: 14px; margin-top: 28px; text-align: center; }
+  </style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">Mis Notas para escritorio</p>
+  <h1>Política de privacidad</h1>
+  <p class="meta">Última actualización: 11 de noviembre de 2026</p>
+
+  <div class="summary">
+    <p><strong>En resumen:</strong> Mis Notas no recoge ningún dato tuyo. No hay anuncios, analítica, rastreadores ni cuentas. Tus notas se guardan en tu ordenador y, solo si tú lo activas, se sincronizan <strong>cifradas</strong> con el servidor Nextcloud que tú elijas. El desarrollador no tiene acceso a ellas en ningún caso.</p>
+  </div>
+
+  <section>
+    <h2>1. Quién es el responsable</h2>
+    <p>Mis Notas para escritorio es una aplicación de software libre para Windows, macOS y Linux desarrollada por <strong>ferlagod</strong> y publicada bajo la licencia GNU GPL v3. Su código fuente es público y se puede revisar en <a href="https://github.com/ferlagod/mis_notas_desktop">github.com/ferlagod/mis_notas_desktop</a>.</p>
+    <p>Para cualquier consulta sobre privacidad puedes escribir a: <a href="mailto: proyectos@oniros.eu">proyectos@oniros.eu</a>.</p>
+  </section>
+
+  <section>
+    <h2>2. Datos que recoge el desarrollador</h2>
+    <p><strong>Ninguno.</strong> La app no envía al desarrollador ni a terceros ningún dato personal, identificador del dispositivo, estadística de uso, informe de errores ni contenido de tus notas. No incluye bibliotecas de publicidad, analítica ni seguimiento, y no usa servicios en la nube del desarrollador ni de terceros.</p>
+  </section>
+
+  <section>
+    <h2>3. Datos que se guardan en tu ordenador</h2>
+    <ul>
+      <li><strong>Notas, carpetas e imágenes</strong> que tú creas. Se guardan en la carpeta de datos de la app dentro de tu usuario (<code>%APPDATA%\Mis Notas</code> en Windows, <code>~/Library/Application Support/Mis Notas</code> en macOS, <code>~/.local/share/mis-notas</code> en Linux). Para protegerlas en reposo, activa el cifrado de disco de tu sistema.</li>
+      <li><strong>Preferencias</strong> de la app: tema, idioma, orden de las notas, tamaño y posición de la ventana, etc.</li>
+      <li>Si activas el bloqueo de la app: un <strong>resumen (hash)</strong> de la contraseña de la app, nunca la contraseña.</li>
+      <li>Si conectas Nextcloud: la <strong>dirección del servidor, tu usuario y la contraseña de aplicación</strong>, junto con la clave de cifrado derivada de tu contraseña maestra. Se guardan en un fichero cifrado cuya clave está en el llavero de tu sistema (Llavero de macOS, Administrador de credenciales de Windows o Secret Service en Linux).</li>
+    </ul>
+    <p>Tu <strong>contraseña maestra</strong> no se guarda en ningún sitio ni se envía nunca a ningún servidor.</p>
+    <p>Las imágenes que añades a una nota se eligen con el diálogo de ficheros del sistema. La app solo accede a las imágenes que tú seleccionas y guarda una copia comprimida dentro de la nota.</p>
+  </section>
+
+  <section>
+    <h2>4. Sincronización opcional con Nextcloud</h2>
+    <p>Si decides activarla, la app se conecta <strong>únicamente al servidor Nextcloud (WebDAV) que tú indicas</strong>, siempre mediante conexión segura HTTPS. El desarrollador no opera ese servidor ni tiene acceso a él.</p>
+    <ul>
+      <li>Antes de salir del ordenador, cada nota, carpeta e imagen se <strong>cifra de extremo a extremo</strong> con AES-256-GCM, con una clave derivada de tu contraseña maestra. El título, el contenido, la carpeta, el color y las fechas van dentro del bloque cifrado.</li>
+      <li>El servidor solo almacena datos ilegibles. Quien lo administre puede ver cuántos ficheros hay, su tamaño aproximado y cuándo cambian, pero no su contenido.</li>
+      <li>Tu usuario y tu contraseña de aplicación se envían a tu servidor para identificarte, igual que en cualquier cliente de Nextcloud.</li>
+    </ul>
+    <p>Si olvidas la contraseña maestra, nadie puede descifrar las notas guardadas en el servidor, tampoco el desarrollador.</p>
+  </section>
+
+  <section>
+    <h2>5. Acceso a tu sistema</h2>
+    <table>
+      <tr><th>Acceso</th><th>Para qué se usa</th></tr>
+      <tr><td>Red</td><td>Sincronizar con tu servidor Nextcloud, solo si la has activado. Mientras la app está abierta sincroniza al editar, al volver a la ventana y cada 30 minutos.</td></tr>
+      <tr><td>Llavero del sistema</td><td>Guardar la clave que cifra las credenciales de Nextcloud. Tu sistema puede pedirte permiso la primera vez.</td></tr>
+      <tr><td>Ficheros que tú eliges</td><td>Añadir imágenes, importar y exportar copias de seguridad y guardar notas como Markdown. La app solo lee o escribe los ficheros que eliges en cada diálogo, además de su propia carpeta de datos y de la copia automática en Descargas/MisNotas al conectar una cuenta.</td></tr>
+      <tr><td>Portapapeles</td><td>Solo al usar "Copiar texto" en una nota.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>6. Compartir, exportar y copias de seguridad</h2>
+    <ul>
+      <li><strong>Guardar como Markdown y copiar:</strong> la nota se guarda <strong>sin cifrar</strong> en el fichero que elijas, o se copia al portapapeles, solo cuando tú lo pides.</li>
+      <li><strong>Exportar:</strong> la copia de seguridad en Markdown se guarda <strong>sin cifrar</strong> en el lugar que tú elijas. Guárdala en un sitio de confianza.</li>
+      <li><strong>Copias del sistema:</strong> si haces copias de seguridad de tu usuario (Time Machine, Historial de archivos, etc.), incluirán la carpeta de datos de la app con tus notas sin cifrar. Las credenciales van cifradas y su clave queda en el llavero del sistema.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>7. Cómo borrar tus datos</h2>
+    <ul>
+      <li><strong>En el ordenador:</strong> borra la carpeta de datos de la app (ver el apartado 3) para eliminar todas las notas, imágenes, preferencias y credenciales. Desinstalar la app no borra esa carpeta. La clave del llavero aparece con el nombre "Mis Notas" y también se puede borrar desde el llavero del sistema.</li>
+      <li><strong>En tu servidor:</strong> las notas sincronizadas están en la carpeta <code>MisNotas</code> de tu Nextcloud. Puedes borrarla cuando quieras desde Nextcloud.</li>
+      <li>Desconectar la cuenta en <em>Ajustes → Sincronización con Nextcloud</em> borra del ordenador el usuario, la contraseña de aplicación y la clave.</li>
+    </ul>
+    <p>Como el desarrollador no guarda ningún dato tuyo, no hay nada que solicitarle para borrar.</p>
+  </section>
+
+  <section>
+    <h2>8. Menores</h2>
+    <p>Mis Notas no está dirigida específicamente a menores y no recoge datos de ningún usuario, de ninguna edad.</p>
+  </section>
+
+  <section>
+    <h2>9. Cambios en esta política</h2>
+    <p>Si la app cambia su forma de tratar los datos, esta página se actualizará y se modificará la fecha de arriba. Los cambios importantes también se indicarán en las notas de la versión correspondiente.</p>
+  </section>
+
+  <footer>Mis Notas · Software libre bajo licencia GNU GPL v3 · <a href="https://github.com/ferlagod/mis_notas_desktop">Código fuente</a></footer>
+</main>
+</body>
+</html>

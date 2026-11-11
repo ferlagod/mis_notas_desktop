@@ -1,0 +1,10 @@
+# Finales de línea: LF en todo salvo los scripts de Windows.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.png binary
+*.jpeg binary
+*.jpg binary
+*.ico binary
+*.icns binary
+*.ttf binary
+*.jar binary
